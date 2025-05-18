@@ -12,6 +12,9 @@ import { useToast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { generateDoctorId, ensureUniqueDoctorId } from "@/lib/utils-doctor"
 
 export default function BulkUploadPage() {
   const router = useRouter()
@@ -97,7 +100,63 @@ export default function BulkUploadPage() {
     }
   }
 
-  // Procesar un lote de médicos
+  // Procesar un médico directamente
+  const procesarMedicoDirecto = async (
+    medico: any,
+  ): Promise<{
+    exito: boolean
+    mensaje: string
+    error?: string
+  }> => {
+    try {
+      // Validar campos requeridos
+      if (
+        !medico.fullName ||
+        !medico.licenseNumber ||
+        !medico.specialties ||
+        !medico.cities ||
+        !medico.phoneNumbers ||
+        !Array.isArray(medico.specialties) ||
+        !Array.isArray(medico.cities) ||
+        !Array.isArray(medico.phoneNumbers)
+      ) {
+        return {
+          exito: false,
+          mensaje: "Campos requeridos faltantes o formato incorrecto",
+          error: "Campos requeridos faltantes o formato incorrecto",
+        }
+      }
+
+      // Generar ID del médico
+      const idBase = generateDoctorId(medico.fullName)
+      const doctorId = await ensureUniqueDoctorId(idBase)
+
+      // Añadir timestamp e ID
+      const medicoConMeta = {
+        ...medico,
+        doctorId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+
+      // Guardar en Firestore
+      const docRef = doc(collection(db, "doctors"))
+      await setDoc(docRef, medicoConMeta)
+
+      return {
+        exito: true,
+        mensaje: "Médico añadido correctamente",
+      }
+    } catch (error) {
+      return {
+        exito: false,
+        mensaje: "Error al añadir médico: " + (error instanceof Error ? error.message : "Error desconocido"),
+        error: error instanceof Error ? error.message : "Error desconocido",
+      }
+    }
+  }
+
+  // Procesar un lote directamente
   const procesarLote = async (
     lote: any[],
   ): Promise<{
@@ -107,33 +166,40 @@ export default function BulkUploadPage() {
     errores: number
     listaErrores: { medico: string; error: string }[]
   }> => {
-    try {
-      const respuesta = await fetch("/api/process-batch", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(lote),
-      })
+    // Resultados para este lote
+    let exitosos = 0
+    let errores = 0
+    const listaErrores: { medico: string; error: string }[] = []
 
-      if (!respuesta.ok) {
-        const textoError = await respuesta.text()
-        throw new Error(`Error del servidor: ${respuesta.status} ${textoError}`)
-      }
+    // Procesar cada médico en el lote
+    for (const medico of lote) {
+      try {
+        const resultado = await procesarMedicoDirecto(medico)
 
-      return await respuesta.json()
-    } catch (error) {
-      console.error("Error al procesar lote:", error)
-      return {
-        exito: false,
-        mensaje: "Error al procesar lote: " + (error instanceof Error ? error.message : "Error desconocido"),
-        exitosos: 0,
-        errores: lote.length,
-        listaErrores: lote.map((medico) => ({
+        if (resultado.exito) {
+          exitosos++
+        } else {
+          errores++
+          listaErrores.push({
+            medico: medico.fullName || "Médico sin nombre",
+            error: resultado.error || "Error desconocido",
+          })
+        }
+      } catch (error) {
+        errores++
+        listaErrores.push({
           medico: medico.fullName || "Médico sin nombre",
-          error: "Error de comunicación con el servidor",
-        })),
+          error: error instanceof Error ? error.message : "Error desconocido",
+        })
       }
+    }
+
+    return {
+      exito: errores === 0,
+      mensaje: `Lote procesado: ${exitosos} éxitos, ${errores} errores.`,
+      exitosos,
+      errores,
+      listaErrores,
     }
   }
 
