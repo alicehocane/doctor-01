@@ -2,59 +2,63 @@ import { type NextRequest, NextResponse } from "next/server"
 import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { generateDoctorId, ensureUniqueDoctorId } from "@/lib/utils-doctor"
+import { revalidatePath } from "next/cache"
 
 export async function POST(request: NextRequest) {
   try {
-    // Get a single doctor from the request
-    const doctor = await request.json()
+    // Obtener un solo médico de la solicitud
+    const medico = await request.json()
 
-    // Validate required fields
+    // Validar campos requeridos
     if (
-      !doctor.fullName ||
-      !doctor.licenseNumber ||
-      !doctor.specialties ||
-      !doctor.cities ||
-      !doctor.phoneNumbers ||
-      !Array.isArray(doctor.specialties) ||
-      !Array.isArray(doctor.cities) ||
-      !Array.isArray(doctor.phoneNumbers)
+      !medico.fullName ||
+      !medico.licenseNumber ||
+      !medico.specialties ||
+      !medico.cities ||
+      !medico.phoneNumbers ||
+      !Array.isArray(medico.specialties) ||
+      !Array.isArray(medico.cities) ||
+      !Array.isArray(medico.phoneNumbers)
     ) {
       return NextResponse.json(
         {
-          success: false,
-          message: "Missing required fields or incorrect format",
+          exito: false,
+          mensaje: "Faltan campos requeridos o formato incorrecto",
         },
         { status: 400 },
       )
     }
 
-    // Generate doctor ID
-    const baseId = generateDoctorId(doctor.fullName)
-    const doctorId = await ensureUniqueDoctorId(baseId)
+    // Generar ID del médico
+    const idBase = generateDoctorId(medico.fullName)
+    const doctorId = await ensureUniqueDoctorId(idBase)
 
-    // Add timestamp and ID
-    const doctorWithMeta = {
-      ...doctor,
+    // Añadir timestamp e ID
+    const medicoConMeta = {
+      ...medico,
       doctorId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
 
-    // Save to Firestore
+    // Guardar en Firestore
     const docRef = doc(collection(db, "doctors"))
-    await setDoc(docRef, doctorWithMeta)
+    await setDoc(docRef, medicoConMeta)
+
+    // Revalidar la ruta de médicos
+    revalidatePath("/admin/doctors")
 
     return NextResponse.json({
-      success: true,
-      message: "Doctor added successfully",
+      exito: true,
+      mensaje: "Médico añadido correctamente",
       doctorId,
     })
   } catch (error) {
-    console.error("Error adding doctor:", error)
+    console.error("Error al añadir médico:", error)
     return NextResponse.json(
       {
-        success: false,
-        message: error instanceof Error ? error.message : "Unknown error",
+        exito: false,
+        mensaje: error instanceof Error ? error.message : "Error desconocido",
       },
       { status: 500 },
     )

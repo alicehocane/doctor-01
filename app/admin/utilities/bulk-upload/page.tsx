@@ -11,97 +11,154 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
 
+// Size of each batch to process
+const BATCH_SIZE = 10
+
 export default function BulkUploadPage() {
   const router = useRouter()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [jsonData, setJsonData] = useState("")
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [currentDoctor, setCurrentDoctor] = useState(0)
-  const [totalDoctors, setTotalDoctors] = useState(0)
-  const [result, setResult] = useState<{
-    success: boolean
-    message: string
-    totalProcessed: number
-    successCount: number
-    errorCount: number
-    errors: { doctor: string; error: string }[]
+  const [estaSubiendo, setEstaSubiendo] = useState(false)
+  const [progresoSubida, setProgresoSubida] = useState(0)
+  const [loteActual, setLoteActual] = useState(0)
+  const [totalLotes, setTotalLotes] = useState(0)
+  const [resultado, setResultado] = useState<{
+    exito: boolean
+    mensaje: string
+    totalProcesados: number
+    exitosos: number
+    errores: number
+    listaErrores: { medico: string; error: string }[]
   } | null>(null)
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const archivo = event.target.files?.[0]
+    if (!archivo) return
 
-    // Check file size before reading
-    if (file.size > 20 * 1024 * 1024) {
-      // 20MB limit
+    // Verificar tamaño del archivo antes de leerlo
+    if (archivo.size > 10 * 1024 * 1024) {
+      // Límite de 10MB
       toast({
-        title: "File too large",
-        description: "The file should not exceed 20MB. Please split the data into smaller files.",
+        title: "Archivo demasiado grande",
+        description: "El archivo no debe exceder los 10MB. Por favor, divida los datos en archivos más pequeños.",
         variant: "destructive",
       })
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const content = e.target?.result as string
-      setJsonData(content)
+    const lector = new FileReader()
+    lector.onload = (e) => {
+      const contenido = e.target?.result as string
+      setJsonData(contenido)
     }
-    reader.readAsText(file)
+    lector.readAsText(archivo)
   }
 
   // Validate JSON format
-  const validateJson = (jsonString: string): { valid: boolean; message: string; data?: any[] } => {
+  const validarJson = (cadenaJson: string): { valido: boolean; mensaje: string; datos?: any[] } => {
     try {
-      const parsed = JSON.parse(jsonString)
-      if (!Array.isArray(parsed)) {
+      const analizado = JSON.parse(cadenaJson)
+      if (!Array.isArray(analizado)) {
         return {
-          valid: false,
-          message: "Invalid JSON format. An array of objects was expected.",
+          valido: false,
+          mensaje: "Formato JSON inválido. Se esperaba un array de objetos.",
         }
       }
-      return { valid: true, message: "Valid JSON", data: parsed }
+      return { valido: true, mensaje: "JSON válido", datos: analizado }
     } catch (error) {
       return {
-        valid: false,
-        message: "Error parsing JSON: " + (error instanceof Error ? error.message : "Unknown error"),
+        valido: false,
+        mensaje: "Error al analizar el JSON: " + (error instanceof Error ? error.message : "Error desconocido"),
       }
     }
   }
 
-  // Process a single doctor
-  const processSingleDoctor = async (
-    doctor: any,
+  // Process a batch of doctors
+  const procesarLote = async (
+    lote: any[],
   ): Promise<{
-    success: boolean
-    message: string
-    doctorId?: string
-    error?: string
+    exito: boolean
+    mensaje: string
+    exitosos: number
+    errores: number
+    listaErrores: { medico: string; error: string }[]
   }> => {
     try {
-      const response = await fetch("/api/doctor", {
+      const respuesta = await fetch("/api/process-batch", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(doctor),
+        body: JSON.stringify(lote),
       })
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Server error: ${response.status} ${errorText}`)
+      if (!respuesta.ok) {
+        // Si obtenemos un error 413, intentamos procesar uno por uno
+        if (respuesta.status === 413 && lote.length > 1) {
+          console.log("Lote demasiado grande, procesando uno por uno")
+
+          // Procesar cada médico individualmente
+          let exitosos = 0
+          let errores = 0
+          const listaErrores: { medico: string; error: string }[] = []
+
+          for (const medico of lote) {
+            try {
+              const respuestaIndividual = await fetch("/api/doctor", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(medico),
+              })
+
+              const resultado = await respuestaIndividual.json()
+
+              if (resultado.exito) {
+                exitosos++
+              } else {
+                errores++
+                listaErrores.push({
+                  medico: medico.fullName || "Médico sin nombre",
+                  error: resultado.mensaje || "Error desconocido",
+                })
+              }
+            } catch (error) {
+              errores++
+              listaErrores.push({
+                medico: medico.fullName || "Médico sin nombre",
+                error: error instanceof Error ? error.message : "Error desconocido",
+              })
+            }
+          }
+
+          return {
+            exito: errores === 0,
+            mensaje: `Procesados individualmente: ${exitosos} éxitos, ${errores} errores.`,
+            exitosos,
+            errores,
+            listaErrores,
+          }
+        }
+
+        const textoError = await respuesta.text()
+        throw new Error(`Error del servidor: ${respuesta.status} ${textoError}`)
       }
 
-      return await response.json()
+      return await respuesta.json()
     } catch (error) {
-      console.error("Error processing doctor:", error)
+      console.error("Error al procesar lote:", error)
       return {
-        success: false,
-        message: "Error processing doctor",
-        error: error instanceof Error ? error.message : "Unknown error",
+        exito: false,
+        mensaje: "Error al procesar lote: " + (error instanceof Error ? error.message : "Error desconocido"),
+        exitosos: 0,
+        errores: lote.length,
+        listaErrores: lote.map((medico) => ({
+          medico: medico.fullName || "Médico sin nombre",
+          error: "Error de comunicación con el servidor",
+        })),
       }
     }
   }
@@ -110,99 +167,99 @@ export default function BulkUploadPage() {
     if (!jsonData.trim()) {
       toast({
         title: "Error",
-        description: "Please enter JSON data or upload a file",
+        description: "Por favor, ingrese datos JSON o cargue un archivo",
         variant: "destructive",
       })
       return
     }
 
-    // Validate JSON format first
-    const validation = validateJson(jsonData)
-    if (!validation.valid || !validation.data) {
+    // Validar formato JSON primero
+    const validacion = validarJson(jsonData)
+    if (!validacion.valido || !validacion.datos) {
       toast({
-        title: "Invalid JSON",
-        description: validation.message,
+        title: "JSON inválido",
+        description: validacion.mensaje,
         variant: "destructive",
       })
       return
     }
 
-    setIsUploading(true)
-    setResult(null)
-    setUploadProgress(0)
+    setEstaSubiendo(true)
+    setResultado(null)
+    setProgresoSubida(0)
 
     try {
-      const doctors = validation.data
-      setTotalDoctors(doctors.length)
+      const medicos = validacion.datos
 
-      // Initialize results
-      let successCount = 0
-      let errorCount = 0
-      const errors: { doctor: string; error: string }[] = []
+      // Calcular número de lotes
+      const lotes = Math.ceil(medicos.length / BATCH_SIZE)
+      setTotalLotes(lotes)
 
-      // Process each doctor individually
-      for (let i = 0; i < doctors.length; i++) {
-        setCurrentDoctor(i + 1)
-        setUploadProgress(Math.round(((i + 1) / doctors.length) * 100))
+      // Inicializar resultados
+      let totalExitosos = 0
+      let totalErrores = 0
+      const todosErrores: { medico: string; error: string }[] = []
 
-        // Process this doctor - one at a time to avoid payload size issues
-        const doctorResult = await processSingleDoctor(doctors[i])
+      // Procesar cada lote individualmente
+      for (let i = 0; i < lotes; i++) {
+        setLoteActual(i + 1)
+        setProgresoSubida(Math.round(((i + 1) / lotes) * 100))
 
-        // Aggregate results
-        if (doctorResult.success) {
-          successCount++
-        } else {
-          errorCount++
-          errors.push({
-            doctor: doctors[i].fullName || "Unnamed doctor",
-            error: doctorResult.error || "Unknown error",
-          })
-        }
+        const indiceInicio = i * BATCH_SIZE
+        const indiceFin = Math.min(indiceInicio + BATCH_SIZE, medicos.length)
+        const lote = medicos.slice(indiceInicio, indiceFin)
 
-        // Update progress every 10 doctors or for the last one
-        if (i % 10 === 0 || i === doctors.length - 1) {
+        // Procesar este lote
+        const resultadoLote = await procesarLote(lote)
+
+        // Agregar resultados
+        totalExitosos += resultadoLote.exitosos
+        totalErrores += resultadoLote.errores
+        todosErrores.push(...resultadoLote.listaErrores)
+
+        // Notificar progreso para conjuntos de datos grandes
+        if (lotes > 5 && (i % 5 === 0 || i === lotes - 1)) {
           toast({
-            title: "Progress",
-            description: `Processed ${i + 1} of ${doctors.length} doctors`,
+            title: "Progreso",
+            description: `Procesados ${i + 1} de ${lotes} lotes`,
           })
         }
       }
 
-      // Final result
-      const finalResult = {
-        success: errorCount === 0,
-        message: `Processed ${doctors.length} records. ${successCount} doctors added successfully, ${errorCount} errors.`,
-        totalProcessed: doctors.length,
-        successCount,
-        errorCount,
-        errors,
+      // Resultado final
+      const resultadoFinal = {
+        exito: totalErrores === 0,
+        mensaje: `Se procesaron ${medicos.length} registros. ${totalExitosos} médicos añadidos correctamente, ${totalErrores} errores.`,
+        totalProcesados: medicos.length,
+        exitosos: totalExitosos,
+        errores: totalErrores,
+        listaErrores: todosErrores,
       }
 
-      setResult(finalResult)
+      setResultado(resultadoFinal)
 
-      if (finalResult.success) {
+      if (resultadoFinal.exito) {
         toast({
-          title: "Upload successful",
-          description: finalResult.message,
+          title: "Carga exitosa",
+          description: resultadoFinal.mensaje,
         })
       } else {
         toast({
-          title: "Upload completed with errors",
-          description: `${successCount} doctors added, ${errorCount} errors.`,
+          title: "Carga completada con errores",
+          description: `${totalExitosos} médicos añadidos, ${totalErrores} errores.`,
           variant: "warning",
         })
       }
     } catch (error) {
-      console.error("Error uploading doctors:", error)
+      console.error("Error al subir médicos:", error)
       toast({
         title: "Error",
         description:
-          "An error occurred while processing the upload: " +
-          (error instanceof Error ? error.message : "Unknown error"),
+          "Ocurrió un error al procesar la carga: " + (error instanceof Error ? error.message : "Error desconocido"),
         variant: "destructive",
       })
     } finally {
-      setIsUploading(false)
+      setEstaSubiendo(false)
     }
   }
 
@@ -211,89 +268,91 @@ export default function BulkUploadPage() {
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => router.back()}>
           <ChevronLeft className="mr-2 h-4 w-4" />
-          Back
+          Volver
         </Button>
 
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">Bulk Upload Doctors</h1>
-          <p className="text-muted-foreground">Upload multiple doctor records at once.</p>
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">Carga Masiva de Médicos</h1>
+          <p className="text-muted-foreground">Sube múltiples registros de médicos a la vez.</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Upload JSON Data</CardTitle>
-          <CardDescription>Upload a JSON file or directly paste the JSON content with doctor data.</CardDescription>
+          <CardTitle>Cargar Datos JSON</CardTitle>
+          <CardDescription>
+            Sube un archivo JSON o pega directamente el contenido JSON con los datos de los médicos.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert>
             <Info className="h-4 w-4" />
-            <AlertTitle>Important Information</AlertTitle>
+            <AlertTitle>Información importante</AlertTitle>
             <AlertDescription>
               <p>
-                To avoid size errors, the system will process records one by one. This process may take longer, but it's
-                more reliable for large datasets.
+                Para evitar errores de tamaño, el sistema procesará los registros en lotes de {BATCH_SIZE}. Si un lote
+                es demasiado grande, procesará los registros uno por uno automáticamente.
               </p>
-              <p className="mt-1">Maximum recommended size: 20MB or 2000 records per upload.</p>
+              <p className="mt-1">Tamaño máximo recomendado: 10MB o 1000 registros por carga.</p>
             </AlertDescription>
           </Alert>
 
           <div>
             <p className="text-sm text-muted-foreground my-4">
-              The file must contain an array of objects, each with doctor data. Required fields: fullName,
-              licenseNumber, specialties, cities, phoneNumbers.
+              El archivo debe contener un array de objetos, cada uno con los datos de un médico. Campos requeridos:
+              fullName, licenseNumber, specialties, cities, phoneNumbers.
             </p>
 
             <div className="flex items-center gap-4 mb-4">
               <input type="file" accept=".json" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={estaSubiendo}>
                 <Upload className="mr-2 h-4 w-4" />
-                Select JSON File
+                Seleccionar Archivo JSON
               </Button>
               <span className="text-sm text-muted-foreground">
-                {fileInputRef.current?.files?.[0]?.name || "No file selected"}
+                {fileInputRef.current?.files?.[0]?.name || "Ningún archivo seleccionado"}
               </span>
             </div>
 
             <div className="space-y-2">
               <label htmlFor="json-data" className="text-sm font-medium">
-                Or paste JSON content directly:
+                O pega el contenido JSON directamente:
               </label>
               <Textarea
                 id="json-data"
                 value={jsonData}
                 onChange={(e) => setJsonData(e.target.value)}
-                placeholder='[{"fullName": "Dr. John Smith", "licenseNumber": "12345", "specialties": ["Cardiology"], "cities": ["New York"], "phoneNumbers": ["1234567890"]}]'
+                placeholder='[{"fullName": "Dr. Juan Pérez", "licenseNumber": "12345", "specialties": ["Cardiología"], "cities": ["Monterrey"], "phoneNumbers": ["8112345678"]}]'
                 className="min-h-[200px] font-mono text-sm"
-                disabled={isUploading}
+                disabled={estaSubiendo}
               />
             </div>
           </div>
 
-          {isUploading && (
+          {estaSubiendo && (
             <div className="space-y-2">
               <p className="text-sm">
-                Processing doctor {currentDoctor} of {totalDoctors}...
+                Procesando lote {loteActual} de {totalLotes}...
               </p>
-              <Progress value={uploadProgress} className="h-2" />
-              <p className="text-xs text-muted-foreground">{uploadProgress}% completed</p>
+              <Progress value={progresoSubida} className="h-2" />
+              <p className="text-xs text-muted-foreground">{progresoSubida}% completado</p>
             </div>
           )}
 
-          {result && (
-            <Alert variant={result.success ? "default" : "destructive"}>
-              {result.success ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-              <AlertTitle>{result.success ? "Upload Successful" : "Upload Error"}</AlertTitle>
+          {resultado && (
+            <Alert variant={resultado.exito ? "default" : "destructive"}>
+              {resultado.exito ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+              <AlertTitle>{resultado.exito ? "Carga Exitosa" : "Error en la Carga"}</AlertTitle>
               <AlertDescription>
-                <p>{result.message}</p>
-                {result.errors.length > 0 && (
+                <p>{resultado.mensaje}</p>
+                {resultado.listaErrores.length > 0 && (
                   <div className="mt-2">
-                    <p className="font-medium">Errors ({result.errors.length}):</p>
+                    <p className="font-medium">Errores ({resultado.listaErrores.length}):</p>
                     <div className="max-h-40 overflow-y-auto mt-1 border rounded p-2">
                       <ul className="list-disc pl-5 space-y-1">
-                        {result.errors.map((error, index) => (
+                        {resultado.listaErrores.map((error, index) => (
                           <li key={index} className="text-sm">
-                            <span className="font-medium">{error.doctor}:</span> {error.error}
+                            <span className="font-medium">{error.medico}:</span> {error.error}
                           </li>
                         ))}
                       </ul>
@@ -305,28 +364,28 @@ export default function BulkUploadPage() {
           )}
         </CardContent>
         <CardFooter className="flex justify-between">
-          <Button variant="outline" onClick={() => router.back()} disabled={isUploading}>
-            Cancel
+          <Button variant="outline" onClick={() => router.back()} disabled={estaSubiendo}>
+            Cancelar
           </Button>
-          <Button onClick={handleUpload} disabled={isUploading || !jsonData.trim()}>
-            {isUploading ? (
+          <Button onClick={handleUpload} disabled={estaSubiendo || !jsonData.trim()}>
+            {estaSubiendo ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
+                Procesando...
               </>
             ) : (
               <>
                 <Upload className="mr-2 h-4 w-4" />
-                Upload Doctors
+                Cargar Médicos
               </>
             )}
           </Button>
         </CardFooter>
       </Card>
 
-      {result?.success && (
+      {resultado?.exito && (
         <div className="flex justify-end">
-          <Button onClick={() => router.push("/admin/doctors")}>View Doctors List</Button>
+          <Button onClick={() => router.push("/admin/doctors")}>Ver Lista de Médicos</Button>
         </div>
       )}
     </div>
