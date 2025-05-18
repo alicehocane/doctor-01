@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, Upload, AlertCircle, CheckCircle, Loader2, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,11 +10,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
-import { bulkUploadDoctors, processChunk } from "@/app/actions/bulk-upload-doctors"
+import { processBatch, validateJsonData } from "@/app/actions/bulk-upload-doctors"
 import { Progress } from "@/components/ui/progress"
 
-// Maximum number of records to process in a single chunk
-const CHUNK_SIZE = 25
+// Maximum number of records to process in a single batch
+const BATCH_SIZE = 25
 
 export default function BulkUploadPage() {
   const router = useRouter()
@@ -23,10 +23,9 @@ export default function BulkUploadPage() {
 
   const [jsonData, setJsonData] = useState("")
   const [isUploading, setIsUploading] = useState(false)
-  const [dataSize, setDataSize] = useState(0)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [currentChunk, setCurrentChunk] = useState(0)
-  const [totalChunks, setTotalChunks] = useState(0)
+  const [currentBatch, setCurrentBatch] = useState(0)
+  const [totalBatches, setTotalBatches] = useState(0)
   const [result, setResult] = useState<{
     success: boolean
     message: string
@@ -35,11 +34,6 @@ export default function BulkUploadPage() {
     errorCount: number
     errors: { doctor: string; error: string }[]
   } | null>(null)
-
-  // Calculate data size when JSON changes
-  useEffect(() => {
-    setDataSize(new Blob([jsonData]).size / 1024) // Size in KB
-  }, [jsonData])
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -74,99 +68,72 @@ export default function BulkUploadPage() {
       return
     }
 
-    // Validate JSON format before sending
-    let parsedData
-    try {
-      parsedData = JSON.parse(jsonData)
-      if (!Array.isArray(parsedData)) {
-        toast({
-          title: "Formato inválido",
-          description: "El JSON debe ser un array de objetos",
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Show warning for large datasets
-      if (parsedData.length > 500) {
-        toast({
-          title: "Conjunto de datos grande",
-          description: `Está cargando ${parsedData.length} registros. La carga puede tardar varios minutos.`,
-          variant: "warning",
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "JSON inválido",
-        description: "El formato JSON no es válido",
-        variant: "destructive",
-      })
-      return
-    }
-
     setIsUploading(true)
     setResult(null)
     setUploadProgress(0)
 
     try {
-      // First validate the JSON format
-      const initialValidation = await bulkUploadDoctors(jsonData)
+      // Validate JSON format before sending
+      const validation = await validateJsonData(jsonData)
 
-      if (!initialValidation.success) {
-        setResult(initialValidation)
+      if (!validation.valid || !validation.data) {
         toast({
-          title: "Error en la validación",
-          description: initialValidation.message,
+          title: "Error de validación",
+          description: validation.message,
           variant: "destructive",
         })
         setIsUploading(false)
         return
       }
 
-      // Split data into chunks
-      const chunks = []
-      for (let i = 0; i < parsedData.length; i += CHUNK_SIZE) {
-        chunks.push(parsedData.slice(i, i + CHUNK_SIZE))
+      const doctors = validation.data
+
+      // Split data into batches
+      const batches = []
+      for (let i = 0; i < doctors.length; i += BATCH_SIZE) {
+        batches.push(doctors.slice(i, i + BATCH_SIZE))
       }
 
-      setTotalChunks(chunks.length)
+      setTotalBatches(batches.length)
 
-      // Process each chunk
+      // Initialize results
       let totalSuccess = 0
       let totalErrors = 0
-      const allErrors = []
+      const allErrors: { doctor: string; error: string }[] = []
 
-      for (let i = 0; i < chunks.length; i++) {
-        setCurrentChunk(i + 1)
-        setUploadProgress(Math.round(((i + 1) / chunks.length) * 100))
+      // Process each batch
+      for (let i = 0; i < batches.length; i++) {
+        setCurrentBatch(i + 1)
+        setUploadProgress(Math.round(((i + 1) / batches.length) * 100))
 
-        // Process this chunk
-        const chunkResult = await processChunk(chunks[i])
+        // Process this batch
+        const batchResult = await processBatch(batches[i])
 
         // Aggregate results
-        totalSuccess += chunkResult.successCount
-        totalErrors += chunkResult.errorCount
-        allErrors.push(...chunkResult.errors)
+        totalSuccess += batchResult.successCount
+        totalErrors += batchResult.errorCount
+        allErrors.push(...batchResult.errors)
 
-        // Update progress after each chunk
-        toast({
-          title: "Progreso",
-          description: `Procesado lote ${i + 1} de ${chunks.length}: ${chunkResult.successCount} éxitos, ${chunkResult.errorCount} errores`,
-        })
+        // Notify progress
+        if (batches.length > 1) {
+          toast({
+            title: `Lote ${i + 1} de ${batches.length}`,
+            description: `Procesados: ${batchResult.successCount} éxitos, ${batchResult.errorCount} errores`,
+          })
+        }
       }
 
       // Final result
       const finalResult = {
         success: totalErrors === 0,
-        message: `Se procesaron ${parsedData.length} registros. ${totalSuccess} médicos añadidos correctamente, ${totalErrors} errores.`,
-        totalProcessed: parsedData.length,
+        message: `Se procesaron ${doctors.length} registros. ${totalSuccess} médicos añadidos correctamente, ${totalErrors} errores.`,
+        totalProcessed: doctors.length,
         successCount: totalSuccess,
         errorCount: totalErrors,
         errors: allErrors,
       }
 
       setResult(finalResult)
-      setUploadProgress(100)
 
       if (finalResult.success) {
         toast({
@@ -176,7 +143,7 @@ export default function BulkUploadPage() {
       } else {
         toast({
           title: "Carga completada con errores",
-          description: finalResult.message,
+          description: `${totalSuccess} médicos añadidos, ${totalErrors} errores.`,
           variant: "warning",
         })
       }
@@ -214,19 +181,19 @@ export default function BulkUploadPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertTitle>Información importante</AlertTitle>
-              <AlertDescription>
-                <p>
-                  Para conjuntos de datos grandes, el sistema procesará los registros en lotes de {CHUNK_SIZE} para
-                  evitar errores de tamaño.
-                </p>
-                <p className="mt-1">Tamaño máximo recomendado: 10MB o 1000 registros por carga.</p>
-              </AlertDescription>
-            </Alert>
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertTitle>Información importante</AlertTitle>
+            <AlertDescription>
+              <p>
+                Para conjuntos de datos grandes, el sistema procesará los registros en lotes de {BATCH_SIZE} para evitar
+                errores de tamaño.
+              </p>
+              <p className="mt-1">Tamaño máximo recomendado: 10MB o 1000 registros por carga.</p>
+            </AlertDescription>
+          </Alert>
 
+          <div>
             <p className="text-sm text-muted-foreground my-4">
               El archivo debe contener un array de objetos, cada uno con los datos de un médico. Campos requeridos:
               fullName, licenseNumber, specialties, cities, phoneNumbers.
@@ -255,21 +222,13 @@ export default function BulkUploadPage() {
                 className="min-h-[200px] font-mono text-sm"
                 disabled={isUploading}
               />
-              {dataSize > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Tamaño de datos: {dataSize.toFixed(2)} KB
-                  {dataSize > 1000 && (
-                    <span className="text-amber-500 ml-2">(Advertencia: conjunto de datos grande)</span>
-                  )}
-                </p>
-              )}
             </div>
           </div>
 
           {isUploading && (
             <div className="space-y-2">
               <p className="text-sm">
-                Procesando lote {currentChunk} de {totalChunks}...
+                Procesando lote {currentBatch} de {totalBatches}...
               </p>
               <Progress value={uploadProgress} className="h-2" />
               <p className="text-xs text-muted-foreground">{uploadProgress}% completado</p>

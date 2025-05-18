@@ -3,6 +3,7 @@
 import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { generateDoctorId, ensureUniqueDoctorId } from "@/lib/utils-doctor"
+import { revalidatePath } from "next/cache"
 
 type DoctorData = {
   fullName: string
@@ -99,54 +100,66 @@ export async function processChunk(chunk: DoctorData[]): Promise<UploadResult> {
   return result
 }
 
-// Main function to handle the initial JSON parsing
-export async function bulkUploadDoctors(data: string): Promise<UploadResult> {
+// Procesar un lote de doctores
+export async function processBatch(batch: DoctorData[]): Promise<UploadResult> {
+  const result: UploadResult = {
+    success: true,
+    message: "",
+    totalProcessed: batch.length,
+    successCount: 0,
+    errorCount: 0,
+    errors: [],
+  }
+
+  // Procesar cada doctor en el lote
+  for (const doctor of batch) {
+    const processResult = await processSingleDoctor(doctor)
+
+    if (processResult.success) {
+      result.successCount++
+    } else {
+      result.errorCount++
+      result.errors.push({
+        doctor: doctor.fullName || "Médico sin nombre",
+        error: processResult.error || "Error desconocido",
+      })
+    }
+  }
+
+  // Establecer éxito basado en resultados
+  result.success = result.errorCount === 0
+
+  // Revalidar la ruta después de procesar un lote
+  revalidatePath("/admin/doctors")
+
+  return result
+}
+
+// Validar el formato JSON
+export async function validateJsonData(data: string): Promise<{
+  valid: boolean
+  message: string
+  data?: DoctorData[]
+}> {
   try {
-    // Parse the JSON data
-    let doctors: DoctorData[]
-    try {
-      doctors = JSON.parse(data)
-      if (!Array.isArray(doctors)) {
-        return {
-          success: false,
-          message: "El formato de datos no es válido. Se esperaba un array de médicos.",
-          totalProcessed: 0,
-          successCount: 0,
-          errorCount: 1,
-          errors: [{ doctor: "N/A", error: "El formato de datos no es válido. Se esperaba un array de médicos." }],
-        }
-      }
-    } catch (error) {
+    const parsed = JSON.parse(data)
+
+    if (!Array.isArray(parsed)) {
       return {
-        success: false,
-        message: "Error al analizar el JSON: " + (error as Error).message,
-        totalProcessed: 0,
-        successCount: 0,
-        errorCount: 1,
-        errors: [{ doctor: "N/A", error: "Error al analizar el JSON: " + (error as Error).message }],
+        valid: false,
+        message: "El formato de datos no es válido. Se esperaba un array de médicos.",
       }
     }
 
-    // This function now only validates the JSON format
-    // The actual processing is done in chunks from the client side
-
-    // Return initial validation success
     return {
-      success: true,
-      message: "Datos JSON válidos. Listos para procesar.",
-      totalProcessed: doctors.length,
-      successCount: 0,
-      errorCount: 0,
-      errors: [],
+      valid: true,
+      message: "Formato JSON válido",
+      data: parsed,
     }
   } catch (error) {
     return {
-      success: false,
-      message: "Error en el proceso de carga: " + (error as Error).message,
-      totalProcessed: 0,
-      successCount: 0,
-      errorCount: 1,
-      errors: [{ doctor: "N/A", error: "Error en el proceso de carga: " + (error as Error).message }],
+      valid: false,
+      message: "Error al analizar el JSON: " + (error as Error).message,
     }
   }
 }
