@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Upload, AlertCircle, CheckCircle, Loader2, Info, Settings } from "lucide-react"
+import { ChevronLeft, Upload, AlertCircle, CheckCircle, Loader2, Info, Settings, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,9 +12,12 @@ import { useToast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore"
+import { collection, doc, writeBatch, serverTimestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { generateDoctorId, ensureUniqueDoctorId } from "@/lib/utils-doctor"
+
+// Límite máximo de documentos por lote de Firestore
+const FIRESTORE_BATCH_LIMIT = 500
 
 export default function BulkUploadPage() {
   const router = useRouter()
@@ -26,8 +29,8 @@ export default function BulkUploadPage() {
   const [progresoSubida, setProgresoSubida] = useState(0)
   const [loteActual, setLoteActual] = useState(0)
   const [totalLotes, setTotalLotes] = useState(0)
-  const [tamanoLotes, setTamanoLotes] = useState([800, 1000, 2000, 2000])
-  const [tamanoLotePersonalizado, setTamanoLotePersonalizado] = useState("800, 1000, 2000, 2000")
+  const [tamanoLotes, setTamanoLotes] = useState([400, 400, 400, 400])
+  const [tamanoLotePersonalizado, setTamanoLotePersonalizado] = useState("400, 400, 400, 400")
   const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false)
   const [resultado, setResultado] = useState<{
     exito: boolean
@@ -45,7 +48,7 @@ export default function BulkUploadPage() {
         const valores = tamanoLotePersonalizado
           .split(",")
           .map((v) => Number.parseInt(v.trim()))
-          .filter((v) => !isNaN(v) && v > 0)
+          .filter((v) => !isNaN(v) && v > 0 && v <= FIRESTORE_BATCH_LIMIT)
 
         if (valores.length > 0) {
           setTamanoLotes(valores)
@@ -100,63 +103,7 @@ export default function BulkUploadPage() {
     }
   }
 
-  // Procesar un médico directamente
-  const procesarMedicoDirecto = async (
-    medico: any,
-  ): Promise<{
-    exito: boolean
-    mensaje: string
-    error?: string
-  }> => {
-    try {
-      // Validar campos requeridos
-      if (
-        !medico.fullName ||
-        !medico.licenseNumber ||
-        !medico.specialties ||
-        !medico.cities ||
-        !medico.phoneNumbers ||
-        !Array.isArray(medico.specialties) ||
-        !Array.isArray(medico.cities) ||
-        !Array.isArray(medico.phoneNumbers)
-      ) {
-        return {
-          exito: false,
-          mensaje: "Campos requeridos faltantes o formato incorrecto",
-          error: "Campos requeridos faltantes o formato incorrecto",
-        }
-      }
-
-      // Generar ID del médico
-      const idBase = generateDoctorId(medico.fullName)
-      const doctorId = await ensureUniqueDoctorId(idBase)
-
-      // Añadir timestamp e ID
-      const medicoConMeta = {
-        ...medico,
-        doctorId,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }
-
-      // Guardar en Firestore
-      const docRef = doc(collection(db, "doctors"))
-      await setDoc(docRef, medicoConMeta)
-
-      return {
-        exito: true,
-        mensaje: "Médico añadido correctamente",
-      }
-    } catch (error) {
-      return {
-        exito: false,
-        mensaje: "Error al añadir médico: " + (error instanceof Error ? error.message : "Error desconocido"),
-        error: error instanceof Error ? error.message : "Error desconocido",
-      }
-    }
-  }
-
-  // Procesar un lote directamente
+  // Procesar un lote usando writeBatch de Firestore
   const procesarLote = async (
     lote: any[],
   ): Promise<{
@@ -171,35 +118,167 @@ export default function BulkUploadPage() {
     let errores = 0
     const listaErrores: { medico: string; error: string }[] = []
 
-    // Procesar cada médico en el lote
-    for (const medico of lote) {
-      try {
-        const resultado = await procesarMedicoDirecto(medico)
+    // Asegurarse de que el lote no exceda el límite de Firestore
+    if (lote.length > FIRESTORE_BATCH_LIMIT) {
+      console.warn(`El lote excede el límite de Firestore (${FIRESTORE_BATCH_LIMIT}). Dividiendo en sub-lotes.`)
 
-        if (resultado.exito) {
-          exitosos++
-        } else {
-          errores++
-          listaErrores.push({
-            medico: medico.fullName || "Médico sin nombre",
-            error: resultado.error || "Error desconocido",
-          })
-        }
-      } catch (error) {
-        errores++
-        listaErrores.push({
-          medico: medico.fullName || "Médico sin nombre",
-          error: error instanceof Error ? error.message : "Error desconocido",
-        })
+      // Dividir en sub-lotes que respeten el límite
+      const subLotes: any[][] = []
+      for (let i = 0; i < lote.length; i += FIRESTORE_BATCH_LIMIT) {
+        subLotes.push(lote.slice(i, i + FIRESTORE_BATCH_LIMIT))
+      }
+
+      // Procesar cada sub-lote
+      for (const subLote of subLotes) {
+        const resultadoSubLote = await procesarLote(subLote)
+        exitosos += resultadoSubLote.exitosos
+        errores += resultadoSubLote.errores
+        listaErrores.push(...resultadoSubLote.listaErrores)
+      }
+
+      return {
+        exito: errores === 0,
+        mensaje: `Lote procesado: ${exitosos} éxitos, ${errores} errores.`,
+        exitosos,
+        errores,
+        listaErrores,
       }
     }
 
-    return {
-      exito: errores === 0,
-      mensaje: `Lote procesado: ${exitosos} éxitos, ${errores} errores.`,
-      exitosos,
-      errores,
-      listaErrores,
+    try {
+      // Crear un nuevo lote de escritura
+      const batch = writeBatch(db)
+      const medicosValidos: any[] = []
+
+      // Primero validar todos los médicos y generar IDs
+      for (const medico of lote) {
+        try {
+          // Validar campos requeridos
+          if (
+            !medico.fullName ||
+            !medico.licenseNumber ||
+            !medico.specialties ||
+            !medico.cities ||
+            !medico.phoneNumbers ||
+            !Array.isArray(medico.specialties) ||
+            !Array.isArray(medico.cities) ||
+            !Array.isArray(medico.phoneNumbers)
+          ) {
+            errores++
+            listaErrores.push({
+              medico: medico.fullName || "Médico sin nombre",
+              error: "Campos requeridos faltantes o formato incorrecto",
+            })
+            continue
+          }
+
+          // Generar ID del médico
+          const idBase = generateDoctorId(medico.fullName)
+          const doctorId = await ensureUniqueDoctorId(idBase)
+
+          // Añadir timestamp e ID
+          const medicoConMeta = {
+            ...medico,
+            doctorId,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          }
+
+          medicosValidos.push(medicoConMeta)
+        } catch (error) {
+          errores++
+          listaErrores.push({
+            medico: medico.fullName || "Médico sin nombre",
+            error: error instanceof Error ? error.message : "Error desconocido",
+          })
+        }
+      }
+
+      // Añadir todos los médicos válidos al lote de escritura
+      for (const medicoValido of medicosValidos) {
+        const docRef = doc(collection(db, "doctors"))
+        batch.set(docRef, medicoValido)
+      }
+
+      // Ejecutar el lote de escritura
+      if (medicosValidos.length > 0) {
+        await batch.commit()
+        exitosos = medicosValidos.length
+      }
+
+      return {
+        exito: errores === 0,
+        mensaje: `Lote procesado: ${exitosos} éxitos, ${errores} errores.`,
+        exitosos,
+        errores,
+        listaErrores,
+      }
+    } catch (error) {
+      console.error("Error al procesar lote:", error)
+
+      // Si falla el lote completo, intentar procesar uno por uno
+      console.log("Intentando procesar médicos individualmente...")
+
+      // Reiniciar contadores
+      exitosos = 0
+      errores = 0
+      listaErrores.length = 0
+
+      // Procesar cada médico individualmente
+      for (const medico of lote) {
+        try {
+          // Validar campos requeridos
+          if (
+            !medico.fullName ||
+            !medico.licenseNumber ||
+            !medico.specialties ||
+            !medico.cities ||
+            !medico.phoneNumbers ||
+            !Array.isArray(medico.specialties) ||
+            !Array.isArray(medico.cities) ||
+            !Array.isArray(medico.phoneNumbers)
+          ) {
+            errores++
+            listaErrores.push({
+              medico: medico.fullName || "Médico sin nombre",
+              error: "Campos requeridos faltantes o formato incorrecto",
+            })
+            continue
+          }
+
+          // Generar ID del médico
+          const idBase = generateDoctorId(medico.fullName)
+          const doctorId = await ensureUniqueDoctorId(idBase)
+
+          // Añadir timestamp e ID
+          const medicoConMeta = {
+            ...medico,
+            doctorId,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          }
+
+          // Guardar en Firestore individualmente
+          const docRef = doc(collection(db, "doctors"))
+          await writeBatch(db).set(docRef, medicoConMeta).commit()
+
+          exitosos++
+        } catch (error) {
+          errores++
+          listaErrores.push({
+            medico: medico.fullName || "Médico sin nombre",
+            error: error instanceof Error ? error.message : "Error desconocido",
+          })
+        }
+      }
+
+      return {
+        exito: errores === 0,
+        mensaje: `Lote procesado individualmente: ${exitosos} éxitos, ${errores} errores.`,
+        exitosos,
+        errores,
+        listaErrores,
+      }
     }
   }
 
@@ -237,14 +316,14 @@ export default function BulkUploadPage() {
 
       // Crear lotes según los tamaños configurados
       for (let i = 0; i < tamanoLotes.length && indiceInicio < medicos.length; i++) {
-        const tamanoLote = tamanoLotes[i]
+        const tamanoLote = Math.min(tamanoLotes[i], FIRESTORE_BATCH_LIMIT)
         const indiceFin = Math.min(indiceInicio + tamanoLote, medicos.length)
         lotes.push(medicos.slice(indiceInicio, indiceFin))
         indiceInicio = indiceFin
       }
 
       // Si quedan médicos, crear lotes adicionales con el último tamaño configurado
-      const ultimoTamanoLote = tamanoLotes[tamanoLotes.length - 1]
+      const ultimoTamanoLote = Math.min(tamanoLotes[tamanoLotes.length - 1], FIRESTORE_BATCH_LIMIT)
       while (indiceInicio < medicos.length) {
         const indiceFin = Math.min(indiceInicio + ultimoTamanoLote, medicos.length)
         lotes.push(medicos.slice(indiceInicio, indiceFin))
@@ -324,6 +403,30 @@ export default function BulkUploadPage() {
     }
   }
 
+  // Exportar errores a CSV
+  const exportarErroresCSV = () => {
+    if (!resultado || resultado.listaErrores.length === 0) return
+
+    // Crear contenido CSV
+    const cabecera = "Médico,Error\n"
+    const filas = resultado.listaErrores
+      .map((error) => `"${error.medico.replace(/"/g, '""')}","${error.error.replace(/"/g, '""')}"`)
+      .join("\n")
+
+    const contenidoCSV = cabecera + filas
+
+    // Crear blob y descargar
+    const blob = new Blob([contenidoCSV], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.setAttribute("href", url)
+    link.setAttribute("download", `errores_carga_${new Date().toISOString().slice(0, 10)}.csv`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -357,11 +460,15 @@ export default function BulkUploadPage() {
                   id="tamano-lotes"
                   value={tamanoLotePersonalizado}
                   onChange={(e) => setTamanoLotePersonalizado(e.target.value)}
-                  placeholder="800, 1000, 2000, 2000"
+                  placeholder="400, 400, 400, 400"
                   className="mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Ejemplo: "800, 1000, 2000, 2000" procesará los primeros 800 registros, luego 1000, luego 2000, etc.
+                  Ejemplo: "400, 400, 400, 400" procesará los primeros 400 registros, luego 400, etc.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 font-medium">
+                  Nota: Firestore tiene un límite de {FIRESTORE_BATCH_LIMIT} documentos por operación de escritura por
+                  lotes. Los valores mayores a {FIRESTORE_BATCH_LIMIT} serán ajustados automáticamente.
                 </p>
               </div>
 
@@ -395,6 +502,10 @@ export default function BulkUploadPage() {
               <p>
                 El sistema procesará los registros en lotes según la configuración establecida:
                 {tamanoLotes.join(", ")} registros por lote.
+              </p>
+              <p className="mt-1">
+                Firestore tiene un límite de {FIRESTORE_BATCH_LIMIT} documentos por operación de escritura por lotes.
+                Los lotes se dividirán automáticamente si es necesario.
               </p>
               <p className="mt-1">Tamaño máximo recomendado: 20MB o 5000 registros por carga.</p>
             </AlertDescription>
@@ -460,6 +571,10 @@ export default function BulkUploadPage() {
                         ))}
                       </ul>
                     </div>
+                    <Button variant="outline" size="sm" className="mt-2" onClick={exportarErroresCSV}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Exportar Errores a CSV
+                    </Button>
                   </div>
                 )}
               </AlertDescription>
