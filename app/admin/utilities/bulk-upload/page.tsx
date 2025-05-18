@@ -20,6 +20,9 @@ import { generateDoctorId, ensureUniqueDoctorId } from "@/lib/utils-doctor"
 // Límite máximo de documentos por lote de Firestore
 const FIRESTORE_BATCH_LIMIT = 500
 
+// Función para esperar un tiempo determinado
+const esperar = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 export default function BulkUploadPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -34,6 +37,7 @@ export default function BulkUploadPage() {
   const [tamanoLotePersonalizado, setTamanoLotePersonalizado] = useState("400, 400, 400, 400")
   const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false)
   const [ignorarCamposFaltantes, setIgnorarCamposFaltantes] = useState(true)
+  const [retrasoEntreLotes, setRetrasoEntreLotes] = useState(1000) // 1 segundo por defecto
   const [resultado, setResultado] = useState<{
     exito: boolean
     mensaje: string
@@ -178,11 +182,19 @@ export default function BulkUploadPage() {
       }
 
       // Procesar cada sub-lote
-      for (const subLote of subLotes) {
+      for (let i = 0; i < subLotes.length; i++) {
+        const subLote = subLotes[i]
+
+        // Procesar el sub-lote
         const resultadoSubLote = await procesarLote(subLote)
         exitosos += resultadoSubLote.exitosos
         errores += resultadoSubLote.errores
         listaErrores.push(...resultadoSubLote.listaErrores)
+
+        // Esperar entre sub-lotes si no es el último
+        if (i < subLotes.length - 1) {
+          await esperar(retrasoEntreLotes)
+        }
       }
 
       return {
@@ -399,6 +411,11 @@ export default function BulkUploadPage() {
           description: `Lote ${i + 1}: ${resultadoLote.exitosos} éxitos, ${resultadoLote.errores} errores.`,
           variant: resultadoLote.exito ? "default" : "warning",
         })
+
+        // Esperar entre lotes si no es el último
+        if (i < lotes.length - 1) {
+          await esperar(retrasoEntreLotes)
+        }
       }
 
       // Resultado final
@@ -507,6 +524,22 @@ export default function BulkUploadPage() {
                 </p>
               </div>
 
+              <div>
+                <Label htmlFor="retraso-lotes">Retraso entre lotes (ms):</Label>
+                <Input
+                  id="retraso-lotes"
+                  type="number"
+                  min="0"
+                  max="10000"
+                  value={retrasoEntreLotes}
+                  onChange={(e) => setRetrasoEntreLotes(Number(e.target.value))}
+                  className="mt-1 w-32"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tiempo de espera entre lotes en milisegundos. Recomendado: 1000-2000 ms para evitar límites de tasa.
+                </p>
+              </div>
+
               <div className="flex items-center space-x-2">
                 <Switch
                   id="ignorar-campos"
@@ -525,6 +558,7 @@ export default function BulkUploadPage() {
                 <AlertTitle>Configuración actual</AlertTitle>
                 <AlertDescription>
                   <p>Tamaños de lotes: {tamanoLotes.join(", ")}</p>
+                  <p>Retraso entre lotes: {retrasoEntreLotes} ms</p>
                   <p>Ignorar campos faltantes: {ignorarCamposFaltantes ? "Sí" : "No"}</p>
                   <p className="mt-1">
                     El último valor ({tamanoLotes[tamanoLotes.length - 1]}) se usará para los lotes restantes.
@@ -552,6 +586,7 @@ export default function BulkUploadPage() {
                 El sistema procesará los registros en lotes según la configuración establecida:
                 {tamanoLotes.join(", ")} registros por lote.
               </p>
+              <p className="mt-1">Retraso entre lotes: {retrasoEntreLotes} ms</p>
               <p className="mt-1">
                 Firestore tiene un límite de {FIRESTORE_BATCH_LIMIT} documentos por operación de escritura por lotes.
                 Los lotes se dividirán automáticamente si es necesario.
