@@ -20,14 +20,13 @@ type DoctorData = {
 type UploadResult = {
   success: boolean
   message: string
-  totalProcessed: number
   successCount: number
   errorCount: number
   errors: { doctor: string; error: string }[]
 }
 
-// Process a single doctor
-async function processSingleDoctor(doctor: DoctorData): Promise<{ success: boolean; error?: string }> {
+// Procesar un solo doctor - función muy pequeña para evitar problemas de tamaño
+export async function processSingleDoctor(doctor: DoctorData): Promise<UploadResult> {
   try {
     // Validate required fields
     if (
@@ -40,7 +39,18 @@ async function processSingleDoctor(doctor: DoctorData): Promise<{ success: boole
       !Array.isArray(doctor.cities) ||
       !Array.isArray(doctor.phoneNumbers)
     ) {
-      throw new Error("Faltan campos requeridos o tienen formato incorrecto")
+      return {
+        success: false,
+        message: "Faltan campos requeridos o tienen formato incorrecto",
+        successCount: 0,
+        errorCount: 1,
+        errors: [
+          {
+            doctor: doctor.fullName || "Médico sin nombre",
+            error: "Faltan campos requeridos o tienen formato incorrecto",
+          },
+        ],
+      }
     }
 
     // Generate doctor ID
@@ -59,103 +69,40 @@ async function processSingleDoctor(doctor: DoctorData): Promise<{ success: boole
     const docRef = doc(collection(db, "doctors"))
     await setDoc(docRef, doctorWithMeta)
 
-    return { success: true }
+    // Revalidate path after successful addition
+    revalidatePath("/admin/doctors")
+
+    return {
+      success: true,
+      message: "Médico añadido correctamente",
+      successCount: 1,
+      errorCount: 0,
+      errors: [],
+    }
   } catch (error) {
     return {
       success: false,
-      error: (error as Error).message,
+      message: (error as Error).message,
+      successCount: 0,
+      errorCount: 1,
+      errors: [
+        {
+          doctor: doctor.fullName || "Médico sin nombre",
+          error: (error as Error).message,
+        },
+      ],
     }
   }
 }
 
-// Process a chunk of doctors
-export async function processChunk(chunk: DoctorData[]): Promise<UploadResult> {
-  const result: UploadResult = {
-    success: true,
-    message: "",
-    totalProcessed: chunk.length,
-    successCount: 0,
-    errorCount: 0,
-    errors: [],
-  }
-
-  // Process each doctor in the chunk
-  for (const doctor of chunk) {
-    const processResult = await processSingleDoctor(doctor)
-
-    if (processResult.success) {
-      result.successCount++
-    } else {
-      result.errorCount++
-      result.errors.push({
-        doctor: doctor.fullName || "Médico sin nombre",
-        error: processResult.error || "Error desconocido",
-      })
-    }
-  }
-
-  // Set success based on results
-  result.success = result.errorCount === 0
-
-  return result
-}
-
-// Procesar un lote de doctores
-export async function processBatch(batch: DoctorData[]): Promise<UploadResult> {
-  const result: UploadResult = {
-    success: true,
-    message: "",
-    totalProcessed: batch.length,
-    successCount: 0,
-    errorCount: 0,
-    errors: [],
-  }
-
-  // Procesar cada doctor en el lote
-  for (const doctor of batch) {
-    const processResult = await processSingleDoctor(doctor)
-
-    if (processResult.success) {
-      result.successCount++
-    } else {
-      result.errorCount++
-      result.errors.push({
-        doctor: doctor.fullName || "Médico sin nombre",
-        error: processResult.error || "Error desconocido",
-      })
-    }
-  }
-
-  // Establecer éxito basado en resultados
-  result.success = result.errorCount === 0
-
-  // Revalidar la ruta después de procesar un lote
-  revalidatePath("/admin/doctors")
-
-  return result
-}
-
-// Validar el formato JSON
-export async function validateJsonData(data: string): Promise<{
+// Validar el formato JSON - función muy pequeña
+export async function validateJson(jsonString: string): Promise<{
   valid: boolean
   message: string
-  data?: DoctorData[]
 }> {
   try {
-    const parsed = JSON.parse(data)
-
-    if (!Array.isArray(parsed)) {
-      return {
-        valid: false,
-        message: "El formato de datos no es válido. Se esperaba un array de médicos.",
-      }
-    }
-
-    return {
-      valid: true,
-      message: "Formato JSON válido",
-      data: parsed,
-    }
+    JSON.parse(jsonString)
+    return { valid: true, message: "JSON válido" }
   } catch (error) {
     return {
       valid: false,

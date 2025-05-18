@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, Upload, AlertCircle, CheckCircle, Loader2, Info } from "lucide-react"
@@ -10,11 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
-import { processBatch, validateJsonData } from "@/app/actions/bulk-upload-doctors"
+import { processSingleDoctor, validateJson } from "@/app/actions/bulk-upload-doctors"
 import { Progress } from "@/components/ui/progress"
-
-// Maximum number of records to process in a single batch
-const BATCH_SIZE = 25
 
 export default function BulkUploadPage() {
   const router = useRouter()
@@ -24,8 +20,8 @@ export default function BulkUploadPage() {
   const [jsonData, setJsonData] = useState("")
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [currentBatch, setCurrentBatch] = useState(0)
-  const [totalBatches, setTotalBatches] = useState(0)
+  const [currentDoctor, setCurrentDoctor] = useState(0)
+  const [totalDoctors, setTotalDoctors] = useState(0)
   const [result, setResult] = useState<{
     success: boolean
     message: string
@@ -68,57 +64,60 @@ export default function BulkUploadPage() {
       return
     }
 
+    // Validate JSON format first
+    const validation = await validateJson(jsonData)
+    if (!validation.valid) {
+      toast({
+        title: "JSON inválido",
+        description: validation.message,
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsUploading(true)
     setResult(null)
     setUploadProgress(0)
 
     try {
-      // Validate JSON format before sending
-      const validation = await validateJsonData(jsonData)
+      // Parse the JSON data on the client side
+      const doctors = JSON.parse(jsonData)
 
-      if (!validation.valid || !validation.data) {
+      if (!Array.isArray(doctors)) {
         toast({
-          title: "Error de validación",
-          description: validation.message,
+          title: "Formato inválido",
+          description: "El JSON debe ser un array de objetos",
           variant: "destructive",
         })
         setIsUploading(false)
         return
       }
 
-      const doctors = validation.data
-
-      // Split data into batches
-      const batches = []
-      for (let i = 0; i < doctors.length; i += BATCH_SIZE) {
-        batches.push(doctors.slice(i, i + BATCH_SIZE))
-      }
-
-      setTotalBatches(batches.length)
+      setTotalDoctors(doctors.length)
 
       // Initialize results
       let totalSuccess = 0
       let totalErrors = 0
       const allErrors: { doctor: string; error: string }[] = []
 
-      // Process each batch
-      for (let i = 0; i < batches.length; i++) {
-        setCurrentBatch(i + 1)
-        setUploadProgress(Math.round(((i + 1) / batches.length) * 100))
+      // Process each doctor individually
+      for (let i = 0; i < doctors.length; i++) {
+        setCurrentDoctor(i + 1)
+        setUploadProgress(Math.round(((i + 1) / doctors.length) * 100))
 
-        // Process this batch
-        const batchResult = await processBatch(batches[i])
+        // Process this doctor - send only ONE doctor at a time to avoid payload size issues
+        const doctorResult = await processSingleDoctor(doctors[i])
 
         // Aggregate results
-        totalSuccess += batchResult.successCount
-        totalErrors += batchResult.errorCount
-        allErrors.push(...batchResult.errors)
+        totalSuccess += doctorResult.successCount
+        totalErrors += doctorResult.errorCount
+        allErrors.push(...doctorResult.errors)
 
-        // Notify progress
-        if (batches.length > 1) {
+        // Update progress every 10 doctors or for the last one
+        if (i % 10 === 0 || i === doctors.length - 1) {
           toast({
-            title: `Lote ${i + 1} de ${batches.length}`,
-            description: `Procesados: ${batchResult.successCount} éxitos, ${batchResult.errorCount} errores`,
+            title: "Progreso",
+            description: `Procesados ${i + 1} de ${doctors.length} médicos`,
           })
         }
       }
@@ -186,8 +185,8 @@ export default function BulkUploadPage() {
             <AlertTitle>Información importante</AlertTitle>
             <AlertDescription>
               <p>
-                Para conjuntos de datos grandes, el sistema procesará los registros en lotes de {BATCH_SIZE} para evitar
-                errores de tamaño.
+                Para evitar errores de tamaño, el sistema procesará los registros uno por uno. Este proceso puede tardar
+                más tiempo, pero es más confiable para conjuntos grandes de datos.
               </p>
               <p className="mt-1">Tamaño máximo recomendado: 10MB o 1000 registros por carga.</p>
             </AlertDescription>
@@ -228,7 +227,7 @@ export default function BulkUploadPage() {
           {isUploading && (
             <div className="space-y-2">
               <p className="text-sm">
-                Procesando lote {currentBatch} de {totalBatches}...
+                Procesando médico {currentDoctor} de {totalDoctors}...
               </p>
               <Progress value={uploadProgress} className="h-2" />
               <p className="text-xs text-muted-foreground">{uploadProgress}% completado</p>
