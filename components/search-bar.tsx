@@ -18,7 +18,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   const [isSearching, setIsSearching] = useState(false)
 
   // These would come from Firestore in a real implementation
-  const ciudades = ["Ciudad de México", "Monterrey", "Guadalajara", "Puebla", "Tijuana", "Cancún", "Mérida"]
+  const ciudades = ["test", "Ciudad de México", "Monterrey", "Guadalajara", "Puebla", "Tijuana", "Cancún", "Mérida"]
   const especialidades = [
     "Cardiólogo",
     "Pediatra",
