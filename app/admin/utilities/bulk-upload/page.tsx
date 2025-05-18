@@ -1,18 +1,17 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Upload, AlertCircle, CheckCircle, Loader2, Info } from "lucide-react"
+import { ChevronLeft, Upload, AlertCircle, CheckCircle, Loader2, Info, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
-
-// Size of each batch to process
-const BATCH_SIZE = 10
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 export default function BulkUploadPage() {
   const router = useRouter()
@@ -24,6 +23,9 @@ export default function BulkUploadPage() {
   const [progresoSubida, setProgresoSubida] = useState(0)
   const [loteActual, setLoteActual] = useState(0)
   const [totalLotes, setTotalLotes] = useState(0)
+  const [tamanoLotes, setTamanoLotes] = useState([800, 1000, 2000, 2000])
+  const [tamanoLotePersonalizado, setTamanoLotePersonalizado] = useState("800, 1000, 2000, 2000")
+  const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false)
   const [resultado, setResultado] = useState<{
     exito: boolean
     mensaje: string
@@ -33,16 +35,36 @@ export default function BulkUploadPage() {
     listaErrores: { medico: string; error: string }[]
   } | null>(null)
 
+  // Actualizar tamaños de lotes cuando cambia el input personalizado
+  useEffect(() => {
+    const actualizarTamanoLotes = () => {
+      try {
+        const valores = tamanoLotePersonalizado
+          .split(",")
+          .map((v) => Number.parseInt(v.trim()))
+          .filter((v) => !isNaN(v) && v > 0)
+
+        if (valores.length > 0) {
+          setTamanoLotes(valores)
+        }
+      } catch (error) {
+        console.error("Error al parsear tamaños de lotes:", error)
+      }
+    }
+
+    actualizarTamanoLotes()
+  }, [tamanoLotePersonalizado])
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const archivo = event.target.files?.[0]
     if (!archivo) return
 
     // Verificar tamaño del archivo antes de leerlo
-    if (archivo.size > 10 * 1024 * 1024) {
-      // Límite de 10MB
+    if (archivo.size > 20 * 1024 * 1024) {
+      // Límite de 20MB
       toast({
         title: "Archivo demasiado grande",
-        description: "El archivo no debe exceder los 10MB. Por favor, divida los datos en archivos más pequeños.",
+        description: "El archivo no debe exceder los 20MB. Por favor, divida los datos en archivos más pequeños.",
         variant: "destructive",
       })
       return
@@ -56,7 +78,7 @@ export default function BulkUploadPage() {
     lector.readAsText(archivo)
   }
 
-  // Validate JSON format
+  // Validar formato JSON
   const validarJson = (cadenaJson: string): { valido: boolean; mensaje: string; datos?: any[] } => {
     try {
       const analizado = JSON.parse(cadenaJson)
@@ -75,7 +97,7 @@ export default function BulkUploadPage() {
     }
   }
 
-  // Process a batch of doctors
+  // Procesar un lote de médicos
   const procesarLote = async (
     lote: any[],
   ): Promise<{
@@ -95,54 +117,6 @@ export default function BulkUploadPage() {
       })
 
       if (!respuesta.ok) {
-        // Si obtenemos un error 413, intentamos procesar uno por uno
-        if (respuesta.status === 413 && lote.length > 1) {
-          console.log("Lote demasiado grande, procesando uno por uno")
-
-          // Procesar cada médico individualmente
-          let exitosos = 0
-          let errores = 0
-          const listaErrores: { medico: string; error: string }[] = []
-
-          for (const medico of lote) {
-            try {
-              const respuestaIndividual = await fetch("/api/doctor", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(medico),
-              })
-
-              const resultado = await respuestaIndividual.json()
-
-              if (resultado.exito) {
-                exitosos++
-              } else {
-                errores++
-                listaErrores.push({
-                  medico: medico.fullName || "Médico sin nombre",
-                  error: resultado.mensaje || "Error desconocido",
-                })
-              }
-            } catch (error) {
-              errores++
-              listaErrores.push({
-                medico: medico.fullName || "Médico sin nombre",
-                error: error instanceof Error ? error.message : "Error desconocido",
-              })
-            }
-          }
-
-          return {
-            exito: errores === 0,
-            mensaje: `Procesados individualmente: ${exitosos} éxitos, ${errores} errores.`,
-            exitosos,
-            errores,
-            listaErrores,
-          }
-        }
-
         const textoError = await respuesta.text()
         throw new Error(`Error del servidor: ${respuesta.status} ${textoError}`)
       }
@@ -191,9 +165,27 @@ export default function BulkUploadPage() {
     try {
       const medicos = validacion.datos
 
-      // Calcular número de lotes
-      const lotes = Math.ceil(medicos.length / BATCH_SIZE)
-      setTotalLotes(lotes)
+      // Dividir los médicos en lotes según los tamaños configurados
+      const lotes: any[][] = []
+      let indiceInicio = 0
+
+      // Crear lotes según los tamaños configurados
+      for (let i = 0; i < tamanoLotes.length && indiceInicio < medicos.length; i++) {
+        const tamanoLote = tamanoLotes[i]
+        const indiceFin = Math.min(indiceInicio + tamanoLote, medicos.length)
+        lotes.push(medicos.slice(indiceInicio, indiceFin))
+        indiceInicio = indiceFin
+      }
+
+      // Si quedan médicos, crear lotes adicionales con el último tamaño configurado
+      const ultimoTamanoLote = tamanoLotes[tamanoLotes.length - 1]
+      while (indiceInicio < medicos.length) {
+        const indiceFin = Math.min(indiceInicio + ultimoTamanoLote, medicos.length)
+        lotes.push(medicos.slice(indiceInicio, indiceFin))
+        indiceInicio = indiceFin
+      }
+
+      setTotalLotes(lotes.length)
 
       // Inicializar resultados
       let totalExitosos = 0
@@ -201,13 +193,17 @@ export default function BulkUploadPage() {
       const todosErrores: { medico: string; error: string }[] = []
 
       // Procesar cada lote individualmente
-      for (let i = 0; i < lotes; i++) {
+      for (let i = 0; i < lotes.length; i++) {
         setLoteActual(i + 1)
-        setProgresoSubida(Math.round(((i + 1) / lotes) * 100))
+        setProgresoSubida(Math.round(((i + 1) / lotes.length) * 100))
 
-        const indiceInicio = i * BATCH_SIZE
-        const indiceFin = Math.min(indiceInicio + BATCH_SIZE, medicos.length)
-        const lote = medicos.slice(indiceInicio, indiceFin)
+        const lote = lotes[i]
+
+        // Mostrar información del lote actual
+        toast({
+          title: `Procesando lote ${i + 1} de ${lotes.length}`,
+          description: `Tamaño del lote: ${lote.length} registros`,
+        })
 
         // Procesar este lote
         const resultadoLote = await procesarLote(lote)
@@ -217,13 +213,12 @@ export default function BulkUploadPage() {
         totalErrores += resultadoLote.errores
         todosErrores.push(...resultadoLote.listaErrores)
 
-        // Notificar progreso para conjuntos de datos grandes
-        if (lotes > 5 && (i % 5 === 0 || i === lotes - 1)) {
-          toast({
-            title: "Progreso",
-            description: `Procesados ${i + 1} de ${lotes} lotes`,
-          })
-        }
+        // Notificar resultado del lote
+        toast({
+          title: resultadoLote.exito ? "Lote procesado con éxito" : "Lote procesado con errores",
+          description: `Lote ${i + 1}: ${resultadoLote.exitosos} éxitos, ${resultadoLote.errores} errores.`,
+          variant: resultadoLote.exito ? "default" : "warning",
+        })
       }
 
       // Resultado final
@@ -271,11 +266,53 @@ export default function BulkUploadPage() {
           Volver
         </Button>
 
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-bold mb-2">Carga Masiva de Médicos</h1>
           <p className="text-muted-foreground">Sube múltiples registros de médicos a la vez.</p>
         </div>
+
+        <Button variant="outline" size="sm" onClick={() => setMostrarConfiguracion(!mostrarConfiguracion)}>
+          <Settings className="mr-2 h-4 w-4" />
+          Configuración
+        </Button>
       </div>
+
+      {mostrarConfiguracion && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Configuración de Lotes</CardTitle>
+            <CardDescription>Configura los tamaños de lotes para el procesamiento por etapas.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="tamano-lotes">Tamaños de lotes (separados por comas):</Label>
+                <Input
+                  id="tamano-lotes"
+                  value={tamanoLotePersonalizado}
+                  onChange={(e) => setTamanoLotePersonalizado(e.target.value)}
+                  placeholder="800, 1000, 2000, 2000"
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ejemplo: "800, 1000, 2000, 2000" procesará los primeros 800 registros, luego 1000, luego 2000, etc.
+                </p>
+              </div>
+
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Configuración actual</AlertTitle>
+                <AlertDescription>
+                  <p>Tamaños de lotes: {tamanoLotes.join(", ")}</p>
+                  <p className="mt-1">
+                    El último valor ({tamanoLotes[tamanoLotes.length - 1]}) se usará para los lotes restantes.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -290,10 +327,10 @@ export default function BulkUploadPage() {
             <AlertTitle>Información importante</AlertTitle>
             <AlertDescription>
               <p>
-                Para evitar errores de tamaño, el sistema procesará los registros en lotes de {BATCH_SIZE}. Si un lote
-                es demasiado grande, procesará los registros uno por uno automáticamente.
+                El sistema procesará los registros en lotes según la configuración establecida:
+                {tamanoLotes.join(", ")} registros por lote.
               </p>
-              <p className="mt-1">Tamaño máximo recomendado: 10MB o 1000 registros por carga.</p>
+              <p className="mt-1">Tamaño máximo recomendado: 20MB o 5000 registros por carga.</p>
             </AlertDescription>
           </Alert>
 
