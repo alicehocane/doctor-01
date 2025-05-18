@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { collection, doc, writeBatch, serverTimestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { generateDoctorId, ensureUniqueDoctorId } from "@/lib/utils-doctor"
@@ -32,6 +33,7 @@ export default function BulkUploadPage() {
   const [tamanoLotes, setTamanoLotes] = useState([400, 400, 400, 400])
   const [tamanoLotePersonalizado, setTamanoLotePersonalizado] = useState("400, 400, 400, 400")
   const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false)
+  const [ignorarCamposFaltantes, setIgnorarCamposFaltantes] = useState(true)
   const [resultado, setResultado] = useState<{
     exito: boolean
     mensaje: string
@@ -103,6 +105,53 @@ export default function BulkUploadPage() {
     }
   }
 
+  // Preparar médico para subida, proporcionando valores predeterminados para campos faltantes
+  const prepararMedico = (medico: any): { valido: boolean; medicoPreparado: any; error?: string } => {
+    try {
+      // Si estamos ignorando campos faltantes, proporcionamos valores predeterminados
+      if (ignorarCamposFaltantes) {
+        const medicoPreparado = {
+          // Usar el valor existente o un valor predeterminado
+          fullName: medico.fullName || "Sin nombre",
+          licenseNumber: medico.licenseNumber || "Sin licencia",
+          specialties: Array.isArray(medico.specialties) ? medico.specialties : ["Sin especialidad"],
+          cities: Array.isArray(medico.cities) ? medico.cities : ["Sin ciudad"],
+          phoneNumbers: Array.isArray(medico.phoneNumbers) ? medico.phoneNumbers : ["Sin teléfono"],
+          // Copiar el resto de campos
+          ...medico,
+        }
+
+        return { valido: true, medicoPreparado }
+      } else {
+        // Validación estricta si no estamos ignorando campos faltantes
+        if (
+          !medico.fullName ||
+          !medico.licenseNumber ||
+          !medico.specialties ||
+          !medico.cities ||
+          !medico.phoneNumbers ||
+          !Array.isArray(medico.specialties) ||
+          !Array.isArray(medico.cities) ||
+          !Array.isArray(medico.phoneNumbers)
+        ) {
+          return {
+            valido: false,
+            medicoPreparado: medico,
+            error: "Campos requeridos faltantes o formato incorrecto",
+          }
+        }
+
+        return { valido: true, medicoPreparado: medico }
+      }
+    } catch (error) {
+      return {
+        valido: false,
+        medicoPreparado: medico,
+        error: error instanceof Error ? error.message : "Error desconocido",
+      }
+    }
+  }
+
   // Procesar un lote usando writeBatch de Firestore
   const procesarLote = async (
     lote: any[],
@@ -150,35 +199,28 @@ export default function BulkUploadPage() {
       const batch = writeBatch(db)
       const medicosValidos: any[] = []
 
-      // Primero validar todos los médicos y generar IDs
+      // Primero validar y preparar todos los médicos
       for (const medico of lote) {
         try {
-          // Validar campos requeridos
-          if (
-            !medico.fullName ||
-            !medico.licenseNumber ||
-            !medico.specialties ||
-            !medico.cities ||
-            !medico.phoneNumbers ||
-            !Array.isArray(medico.specialties) ||
-            !Array.isArray(medico.cities) ||
-            !Array.isArray(medico.phoneNumbers)
-          ) {
+          // Preparar médico con valores predeterminados si es necesario
+          const { valido, medicoPreparado, error } = prepararMedico(medico)
+
+          if (!valido) {
             errores++
             listaErrores.push({
               medico: medico.fullName || "Médico sin nombre",
-              error: "Campos requeridos faltantes o formato incorrecto",
+              error: error || "Error desconocido",
             })
             continue
           }
 
           // Generar ID del médico
-          const idBase = generateDoctorId(medico.fullName)
+          const idBase = generateDoctorId(medicoPreparado.fullName)
           const doctorId = await ensureUniqueDoctorId(idBase)
 
           // Añadir timestamp e ID
           const medicoConMeta = {
-            ...medico,
+            ...medicoPreparado,
             doctorId,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
@@ -227,32 +269,25 @@ export default function BulkUploadPage() {
       // Procesar cada médico individualmente
       for (const medico of lote) {
         try {
-          // Validar campos requeridos
-          if (
-            !medico.fullName ||
-            !medico.licenseNumber ||
-            !medico.specialties ||
-            !medico.cities ||
-            !medico.phoneNumbers ||
-            !Array.isArray(medico.specialties) ||
-            !Array.isArray(medico.cities) ||
-            !Array.isArray(medico.phoneNumbers)
-          ) {
+          // Preparar médico con valores predeterminados si es necesario
+          const { valido, medicoPreparado, error } = prepararMedico(medico)
+
+          if (!valido) {
             errores++
             listaErrores.push({
               medico: medico.fullName || "Médico sin nombre",
-              error: "Campos requeridos faltantes o formato incorrecto",
+              error: error || "Error desconocido",
             })
             continue
           }
 
           // Generar ID del médico
-          const idBase = generateDoctorId(medico.fullName)
+          const idBase = generateDoctorId(medicoPreparado.fullName)
           const doctorId = await ensureUniqueDoctorId(idBase)
 
           // Añadir timestamp e ID
           const medicoConMeta = {
-            ...medico,
+            ...medicoPreparado,
             doctorId,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
@@ -472,11 +507,25 @@ export default function BulkUploadPage() {
                 </p>
               </div>
 
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="ignorar-campos"
+                  checked={ignorarCamposFaltantes}
+                  onCheckedChange={setIgnorarCamposFaltantes}
+                />
+                <Label htmlFor="ignorar-campos">Ignorar campos faltantes</Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Si está activado, los registros con campos faltantes se cargarán con valores predeterminados. Si está
+                desactivado, los registros con campos faltantes se rechazarán.
+              </p>
+
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertTitle>Configuración actual</AlertTitle>
                 <AlertDescription>
                   <p>Tamaños de lotes: {tamanoLotes.join(", ")}</p>
+                  <p>Ignorar campos faltantes: {ignorarCamposFaltantes ? "Sí" : "No"}</p>
                   <p className="mt-1">
                     El último valor ({tamanoLotes[tamanoLotes.length - 1]}) se usará para los lotes restantes.
                   </p>
@@ -507,14 +556,18 @@ export default function BulkUploadPage() {
                 Firestore tiene un límite de {FIRESTORE_BATCH_LIMIT} documentos por operación de escritura por lotes.
                 Los lotes se dividirán automáticamente si es necesario.
               </p>
+              <p className="mt-1">
+                Modo de validación: {ignorarCamposFaltantes ? "Flexible (ignora campos faltantes)" : "Estricto"}
+              </p>
               <p className="mt-1">Tamaño máximo recomendado: 20MB o 5000 registros por carga.</p>
             </AlertDescription>
           </Alert>
 
           <div>
             <p className="text-sm text-muted-foreground my-4">
-              El archivo debe contener un array de objetos, cada uno con los datos de un médico. Campos requeridos:
+              El archivo debe contener un array de objetos, cada uno con los datos de un médico. Campos recomendados:
               fullName, licenseNumber, specialties, cities, phoneNumbers.
+              {ignorarCamposFaltantes && " Los campos faltantes se completarán con valores predeterminados."}
             </p>
 
             <div className="flex items-center gap-4 mb-4">
