@@ -25,6 +25,81 @@ type UploadResult = {
   errors: { doctor: string; error: string }[]
 }
 
+// Process a single doctor
+async function processSingleDoctor(doctor: DoctorData): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Validate required fields
+    if (
+      !doctor.fullName ||
+      !doctor.licenseNumber ||
+      !doctor.specialties ||
+      !doctor.cities ||
+      !doctor.phoneNumbers ||
+      !Array.isArray(doctor.specialties) ||
+      !Array.isArray(doctor.cities) ||
+      !Array.isArray(doctor.phoneNumbers)
+    ) {
+      throw new Error("Faltan campos requeridos o tienen formato incorrecto")
+    }
+
+    // Generate doctor ID
+    const baseId = generateDoctorId(doctor.fullName)
+    const doctorId = await ensureUniqueDoctorId(baseId)
+
+    // Add timestamp and ID
+    const doctorWithMeta = {
+      ...doctor,
+      doctorId,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }
+
+    // Save to Firestore
+    const docRef = doc(collection(db, "doctors"))
+    await setDoc(docRef, doctorWithMeta)
+
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: (error as Error).message,
+    }
+  }
+}
+
+// Process a chunk of doctors
+export async function processChunk(chunk: DoctorData[]): Promise<UploadResult> {
+  const result: UploadResult = {
+    success: true,
+    message: "",
+    totalProcessed: chunk.length,
+    successCount: 0,
+    errorCount: 0,
+    errors: [],
+  }
+
+  // Process each doctor in the chunk
+  for (const doctor of chunk) {
+    const processResult = await processSingleDoctor(doctor)
+
+    if (processResult.success) {
+      result.successCount++
+    } else {
+      result.errorCount++
+      result.errors.push({
+        doctor: doctor.fullName || "Médico sin nombre",
+        error: processResult.error || "Error desconocido",
+      })
+    }
+  }
+
+  // Set success based on results
+  result.success = result.errorCount === 0
+
+  return result
+}
+
+// Main function to handle the initial JSON parsing
 export async function bulkUploadDoctors(data: string): Promise<UploadResult> {
   try {
     // Parse the JSON data
@@ -52,68 +127,18 @@ export async function bulkUploadDoctors(data: string): Promise<UploadResult> {
       }
     }
 
-    // Initialize result
-    const result: UploadResult = {
+    // This function now only validates the JSON format
+    // The actual processing is done in chunks from the client side
+
+    // Return initial validation success
+    return {
       success: true,
-      message: "",
+      message: "Datos JSON válidos. Listos para procesar.",
       totalProcessed: doctors.length,
       successCount: 0,
       errorCount: 0,
       errors: [],
     }
-
-    // Process each doctor
-    for (const doctor of doctors) {
-      try {
-        // Validate required fields
-        if (
-          !doctor.fullName ||
-          !doctor.licenseNumber ||
-          !doctor.specialties ||
-          !doctor.cities ||
-          !doctor.phoneNumbers ||
-          !Array.isArray(doctor.specialties) ||
-          !Array.isArray(doctor.cities) ||
-          !Array.isArray(doctor.phoneNumbers)
-        ) {
-          throw new Error("Faltan campos requeridos o tienen formato incorrecto")
-        }
-
-        // Generate doctor ID
-        const baseId = generateDoctorId(doctor.fullName)
-        const doctorId = await ensureUniqueDoctorId(baseId)
-
-        // Add timestamp and ID
-        const doctorWithMeta = {
-          ...doctor,
-          doctorId,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        }
-
-        // Save to Firestore
-        const docRef = doc(collection(db, "doctors"))
-        await setDoc(docRef, doctorWithMeta)
-
-        result.successCount++
-      } catch (error) {
-        result.errorCount++
-        result.errors.push({
-          doctor: doctor.fullName || "Médico sin nombre",
-          error: (error as Error).message,
-        })
-      }
-    }
-
-    // Set final message
-    if (result.errorCount === 0) {
-      result.message = `Se procesaron ${result.successCount} médicos correctamente.`
-    } else {
-      result.message = `Se procesaron ${result.successCount} médicos correctamente. Hubo ${result.errorCount} errores.`
-      result.success = result.successCount > 0 // Only consider it a success if at least one doctor was processed
-    }
-
-    return result
   } catch (error) {
     return {
       success: false,
