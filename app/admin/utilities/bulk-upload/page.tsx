@@ -10,9 +10,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
+import { processBatch, validateJson } from "@/app/actions/bulk-upload-doctors"
 
 // Tamaño del lote para procesar
-const CHUNK_SIZE = 20
+const CHUNK_SIZE = 10
 
 export default function BulkUploadPage() {
   const router = useRouter()
@@ -56,70 +57,6 @@ export default function BulkUploadPage() {
     reader.readAsText(file)
   }
 
-  const validateJson = (jsonString: string): { valid: boolean; message: string; data?: any[] } => {
-    try {
-      const parsed = JSON.parse(jsonString)
-      if (!Array.isArray(parsed)) {
-        return {
-          valid: false,
-          message: "El formato JSON no es válido. Se esperaba un array de objetos.",
-        }
-      }
-      return { valid: true, message: "JSON válido", data: parsed }
-    } catch (error) {
-      return {
-        valid: false,
-        message: "Error al analizar el JSON: " + (error instanceof Error ? error.message : "Error desconocido"),
-      }
-    }
-  }
-
-  const processBatch = async (
-    batch: any[],
-  ): Promise<{
-    success: boolean
-    message: string
-    successCount: number
-    errorCount: number
-    errors: { doctor: string; error: string }[]
-  }> => {
-    try {
-      const response = await fetch("/api/process-batch", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(batch),
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Error del servidor: ${response.status} ${errorText}`)
-      }
-
-      // Intentar analizar la respuesta como JSON
-      const responseText = await response.text()
-      try {
-        return JSON.parse(responseText)
-      } catch (parseError) {
-        console.error("Error al analizar la respuesta JSON:", responseText)
-        throw new Error("La respuesta del servidor no es un JSON válido")
-      }
-    } catch (error) {
-      console.error("Error en processBatch:", error)
-      return {
-        success: false,
-        message: "Error al procesar el lote: " + (error instanceof Error ? error.message : "Error desconocido"),
-        successCount: 0,
-        errorCount: batch.length,
-        errors: batch.map((doctor) => ({
-          doctor: doctor.fullName || "Médico sin nombre",
-          error: "Error de comunicación con el servidor",
-        })),
-      }
-    }
-  }
-
   const handleUpload = async () => {
     if (!jsonData.trim()) {
       toast({
@@ -131,7 +68,7 @@ export default function BulkUploadPage() {
     }
 
     // Validate JSON format first
-    const validation = validateJson(jsonData)
+    const validation = await validateJson(jsonData)
     if (!validation.valid || !validation.data) {
       toast({
         title: "JSON inválido",
@@ -166,7 +103,7 @@ export default function BulkUploadPage() {
         const endIndex = Math.min(startIndex + CHUNK_SIZE, doctors.length)
         const batch = doctors.slice(startIndex, endIndex)
 
-        // Process this batch
+        // Process this batch using server action directly
         const batchResult = await processBatch(batch)
 
         // Aggregate results

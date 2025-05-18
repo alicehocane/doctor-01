@@ -25,7 +25,7 @@ type UploadResult = {
   errors: { doctor: string; error: string }[]
 }
 
-// Procesar un solo doctor - función muy pequeña para evitar problemas de tamaño
+// Procesar un solo doctor
 export async function processSingleDoctor(doctor: DoctorData): Promise<UploadResult> {
   try {
     // Validate required fields
@@ -91,6 +91,61 @@ export async function processSingleDoctor(doctor: DoctorData): Promise<UploadRes
           error: (error as Error).message,
         },
       ],
+    }
+  }
+}
+
+// Procesar un lote de doctores
+export async function processBatch(batch: DoctorData[]): Promise<UploadResult> {
+  // Resultados para este lote
+  let successCount = 0
+  let errorCount = 0
+  const errors: { doctor: string; error: string }[] = []
+
+  // Procesar cada doctor en el lote
+  for (const doctor of batch) {
+    try {
+      const result = await processSingleDoctor(doctor)
+      successCount += result.successCount
+      errorCount += result.errorCount
+      errors.push(...result.errors)
+    } catch (error) {
+      errorCount++
+      errors.push({
+        doctor: doctor.fullName || "Médico sin nombre",
+        error: error instanceof Error ? error.message : "Error desconocido",
+      })
+    }
+  }
+
+  return {
+    success: errorCount === 0,
+    message: `Lote procesado: ${successCount} éxitos, ${errorCount} errores.`,
+    successCount,
+    errorCount,
+    errors,
+  }
+}
+
+// Validar JSON
+export async function validateJson(jsonString: string): Promise<{
+  valid: boolean
+  message: string
+  data?: DoctorData[]
+}> {
+  try {
+    const parsed = JSON.parse(jsonString)
+    if (!Array.isArray(parsed)) {
+      return {
+        valid: false,
+        message: "El formato JSON no es válido. Se esperaba un array de objetos.",
+      }
+    }
+    return { valid: true, message: "JSON válido", data: parsed }
+  } catch (error) {
+    return {
+      valid: false,
+      message: "Error al analizar el JSON: " + (error instanceof Error ? error.message : "Error desconocido"),
     }
   }
 }
