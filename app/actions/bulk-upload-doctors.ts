@@ -94,19 +94,3 @@ export async function processSingleDoctor(doctor: DoctorData): Promise<UploadRes
     }
   }
 }
-
-// Validar el formato JSON - función muy pequeña
-export async function validateJson(jsonString: string): Promise<{
-  valid: boolean
-  message: string
-}> {
-  try {
-    JSON.parse(jsonString)
-    return { valid: true, message: "JSON válido" }
-  } catch (error) {
-    return {
-      valid: false,
-      message: "Error al analizar el JSON: " + (error as Error).message,
-    }
-  }
-}

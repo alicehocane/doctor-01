@@ -9,8 +9,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
-import { processSingleDoctor, validateJson } from "@/app/actions/bulk-upload-doctors"
 import { Progress } from "@/components/ui/progress"
+
+// Tamaño del lote para procesar
+const CHUNK_SIZE = 20
 
 export default function BulkUploadPage() {
   const router = useRouter()
@@ -20,8 +22,8 @@ export default function BulkUploadPage() {
   const [jsonData, setJsonData] = useState("")
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [currentDoctor, setCurrentDoctor] = useState(0)
-  const [totalDoctors, setTotalDoctors] = useState(0)
+  const [currentBatch, setCurrentBatch] = useState(0)
+  const [totalBatches, setTotalBatches] = useState(0)
   const [result, setResult] = useState<{
     success: boolean
     message: string
@@ -36,11 +38,11 @@ export default function BulkUploadPage() {
     if (!file) return
 
     // Check file size before reading
-    if (file.size > 10 * 1024 * 1024) {
-      // 10MB limit
+    if (file.size > 20 * 1024 * 1024) {
+      // 20MB limit
       toast({
         title: "Archivo demasiado grande",
-        description: "El archivo no debe exceder los 10MB. Por favor, divida los datos en archivos más pequeños.",
+        description: "El archivo no debe exceder los 20MB. Por favor, divida los datos en archivos más pequeños.",
         variant: "destructive",
       })
       return
@@ -93,31 +95,35 @@ export default function BulkUploadPage() {
         return
       }
 
-      setTotalDoctors(doctors.length)
+      setTotalBatches(Math.ceil(doctors.length / CHUNK_SIZE))
 
       // Initialize results
       let totalSuccess = 0
       let totalErrors = 0
       const allErrors: { doctor: string; error: string }[] = []
 
-      // Process each doctor individually
-      for (let i = 0; i < doctors.length; i++) {
-        setCurrentDoctor(i + 1)
-        setUploadProgress(Math.round(((i + 1) / doctors.length) * 100))
+      // Process each batch individually
+      for (let i = 0; i < totalBatches; i++) {
+        setCurrentBatch(i + 1)
+        setUploadProgress(Math.round(((i + 1) / totalBatches) * 100))
 
-        // Process this doctor - send only ONE doctor at a time to avoid payload size issues
-        const doctorResult = await processSingleDoctor(doctors[i])
+        const startIndex = i * CHUNK_SIZE
+        const endIndex = Math.min(startIndex + CHUNK_SIZE, doctors.length)
+        const batch = doctors.slice(startIndex, endIndex)
+
+        // Process this batch - send only ONE batch at a time to avoid payload size issues
+        const batchResult = await processBatch(batch)
 
         // Aggregate results
-        totalSuccess += doctorResult.successCount
-        totalErrors += doctorResult.errorCount
-        allErrors.push(...doctorResult.errors)
+        totalSuccess += batchResult.successCount
+        totalErrors += batchResult.errorCount
+        allErrors.push(...batchResult.errors)
 
-        // Update progress every 10 doctors or for the last one
-        if (i % 10 === 0 || i === doctors.length - 1) {
+        // Update progress every 10 batches or for the last one
+        if (i % 10 === 0 || i === totalBatches - 1) {
           toast({
             title: "Progreso",
-            description: `Procesados ${i + 1} de ${doctors.length} médicos`,
+            description: `Procesados ${i + 1} de ${totalBatches} lotes`,
           })
         }
       }
@@ -158,6 +164,22 @@ export default function BulkUploadPage() {
     }
   }
 
+  const processBatch = async (batch: any[]) => {
+    const response = await fetch("/api/process-batch", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(batch),
+    })
+
+    if (!response.ok) {
+      throw new Error("Error al procesar el lote")
+    }
+
+    return await response.json()
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -185,10 +207,10 @@ export default function BulkUploadPage() {
             <AlertTitle>Información importante</AlertTitle>
             <AlertDescription>
               <p>
-                Para evitar errores de tamaño, el sistema procesará los registros uno por uno. Este proceso puede tardar
-                más tiempo, pero es más confiable para conjuntos grandes de datos.
+                Para evitar errores de tamaño, el sistema procesará los registros en lotes de {CHUNK_SIZE} registros.
+                Este proceso puede tardar más tiempo, pero es más confiable para conjuntos grandes de datos.
               </p>
-              <p className="mt-1">Tamaño máximo recomendado: 10MB o 1000 registros por carga.</p>
+              <p className="mt-1">Tamaño máximo recomendado: 20MB o 2000 registros por carga.</p>
             </AlertDescription>
           </Alert>
 
@@ -227,7 +249,7 @@ export default function BulkUploadPage() {
           {isUploading && (
             <div className="space-y-2">
               <p className="text-sm">
-                Procesando médico {currentDoctor} de {totalDoctors}...
+                Procesando lote {currentBatch} de {totalBatches}...
               </p>
               <Progress value={uploadProgress} className="h-2" />
               <p className="text-xs text-muted-foreground">{uploadProgress}% completado</p>
@@ -285,4 +307,29 @@ export default function BulkUploadPage() {
       )}
     </div>
   )
+}
+
+const validateJson = async (jsonData: string) => {
+  try {
+    JSON.parse(jsonData)
+    return { valid: true, message: "" }
+  } catch (error) {
+    return { valid: false, message: "El formato JSON no es válido" }
+  }
+}
+
+const processBatch = async (batch: any[]) => {
+  const response = await fetch("/api/process-batch", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(batch),
+  })
+
+  if (!response.ok) {
+    throw new Error("Error al procesar el lote")
+  }
+
+  return await response.json()
 }
