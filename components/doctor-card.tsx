@@ -12,30 +12,30 @@ interface DoctorCardProps {
 export default function DoctorCard({ doctor, searchType, searchValue }: DoctorCardProps) {
   // Determine priority indicators
   const hasPrioritySpecialty = doctor.specialties?.some((s: string) => 
-    s.toLowerCase().includes(searchValue.toLowerCase())
+    s.toLowerCase().includes(searchValue.toLowerCase()));
   const hasPriorityDisease = doctor.diseasesTreated?.some((d: string) => 
-    d.toLowerCase().includes(searchValue.toLowerCase()))
+    d.toLowerCase().includes(searchValue.toLowerCase()));
   const hasPriorityPhone = doctor.phoneNumbers?.some((p: string) => 
-    p.includes(searchValue))
+    p.includes(searchValue));
 
   // Determine which specialty to show based on search
-  let displaySpecialty = doctor.specialties[0]
+  let displaySpecialty = doctor.specialties[0];
   if (searchType === "especialidad") {
     const matchedSpecialty = doctor.specialties.find(
-      (specialty: string) => specialty.toLowerCase() === searchValue.toLowerCase(),
-    )
+      (specialty: string) => specialty.toLowerCase() === searchValue.toLowerCase()
+    );
     if (matchedSpecialty) {
-      displaySpecialty = matchedSpecialty
+      displaySpecialty = matchedSpecialty;
     }
   }
 
   // Format phone number for display
   const formatPhoneNumber = (phone: string) => {
     if (phone.length === 10) {
-      return `(${phone.substring(0, 3)}) ${phone.substring(3, 6)}-${phone.substring(6)}`
+      return `(${phone.substring(0, 3)}) ${phone.substring(3, 6)}-${phone.substring(6)}`;
     }
-    return phone
-  }
+    return phone;
+  };
 
   return (
     <div className={`bg-card rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow ${
