@@ -3730,7 +3730,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                     }}
                   >
                     <ChevronDown className="h-4 w-4 mr-2" />
-                    {loadMoreState[searchType as keyof typeof loadMoreState] <6 ? "Ver más" : "Ver más allá"}
+                    {loadMoreState[searchType as keyof typeof loadMoreState] < 5 ? "Ver más" : "Ver más allá"}
                   </div>
               )}
             </SelectContent>
