@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Phone, MapPin, ArrowRight, Star } from "lucide-react"
+import { Phone, MapPin, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
@@ -10,56 +10,38 @@ interface DoctorCardProps {
 }
 
 export default function DoctorCard({ doctor, searchType, searchValue }: DoctorCardProps) {
-  // Determine priority indicators
-  const hasPrioritySpecialty = doctor.specialties?.some((s: string) => 
-    s.toLowerCase().includes(searchValue.toLowerCase()));
-  const hasPriorityDisease = doctor.diseasesTreated?.some((d: string) => 
-    d.toLowerCase().includes(searchValue.toLowerCase()));
-  const hasPriorityPhone = doctor.phoneNumbers?.some((p: string) => 
-    p.includes(searchValue));
-
   // Determine which specialty to show based on search
-  let displaySpecialty = doctor.specialties[0];
+  let displaySpecialty = doctor.specialties[0]
+
   if (searchType === "especialidad") {
     const matchedSpecialty = doctor.specialties.find(
-      (specialty: string) => specialty.toLowerCase() === searchValue.toLowerCase()
-    );
+      (specialty: string) => specialty.toLowerCase() === searchValue.toLowerCase(),
+    )
     if (matchedSpecialty) {
-      displaySpecialty = matchedSpecialty;
+      displaySpecialty = matchedSpecialty
     }
   }
 
   // Format phone number for display
   const formatPhoneNumber = (phone: string) => {
     if (phone.length === 10) {
-      return `(${phone.substring(0, 3)}) ${phone.substring(3, 6)}-${phone.substring(6)}`;
+      return `(${phone.substring(0, 3)}) ${phone.substring(3, 6)}-${phone.substring(6)}`
     }
-    return phone;
-  };
+    return phone
+  }
 
   return (
-    <div className={`bg-card rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow ${
-      (hasPrioritySpecialty || hasPriorityDisease || hasPriorityPhone) ? 
-      'border-l-4 border-primary' : ''
-    }`}>
+    <div className="bg-card rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow">
       <div className="flex flex-col md:flex-row gap-4">
         <div className="md:w-3/4">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-lg font-semibold">
-              <Link href={`/doctor/${doctor.id}`} className="hover:text-primary transition-colors">
-                {doctor.fullName}
-              </Link>
-            </h3>
-            {(hasPrioritySpecialty || hasPriorityDisease || hasPriorityPhone) && (
-              <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-            )}
-          </div>
+          <h3 className="text-lg font-semibold mb-1">
+            <Link href={`/doctor/${doctor.id}`} className="hover:text-primary transition-colors">
+              {doctor.fullName}
+            </Link>
+          </h3>
 
           <Badge variant="outline" className="mb-3">
             {displaySpecialty}
-            {hasPrioritySpecialty && (
-              <span className="ml-1 text-primary">★</span>
-            )}
           </Badge>
 
           <div className="space-y-2 text-sm">
@@ -73,12 +55,7 @@ export default function DoctorCard({ doctor, searchType, searchValue }: DoctorCa
             {doctor.phoneNumbers.length > 0 && (
               <div className="flex items-start gap-2">
                 <Phone className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                <span className={hasPriorityPhone ? "text-primary font-medium" : ""}>
-                  {formatPhoneNumber(doctor.phoneNumbers[0])}
-                  {hasPriorityPhone && (
-                    <span className="ml-1 text-primary">★</span>
-                  )}
-                </span>
+                <span>{formatPhoneNumber(doctor.phoneNumbers[0])}</span>
               </div>
             )}
 
@@ -87,15 +64,8 @@ export default function DoctorCard({ doctor, searchType, searchValue }: DoctorCa
                 <p className="text-xs text-muted-foreground mb-1">Padecimientos atendidos:</p>
                 <div className="flex flex-wrap gap-1">
                   {doctor.diseasesTreated.slice(0, 3).map((disease: string) => (
-                    <Badge 
-                      key={disease} 
-                      variant={hasPriorityDisease ? "default" : "secondary"} 
-                      className="text-xs"
-                    >
+                    <Badge key={disease} variant="secondary" className="text-xs">
                       {disease}
-                      {hasPriorityDisease && disease.toLowerCase().includes(searchValue.toLowerCase()) && (
-                        <span className="ml-1">★</span>
-                      )}
                     </Badge>
                   ))}
                   {doctor.diseasesTreated.length > 3 && (
