@@ -23,7 +23,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
 
   // These would come from Firestore in a real implementation
   const ciudades = ["Ciudad de México", "Monterrey", "Guadalajara"]
-  const especialidades = [
+  const allEspecialidades  = [
   "Acupuntor",
   "Alergología",
   "Alergólogo",
@@ -216,7 +216,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   "Urólogo",
   "Urólogo pediátrico"
 ];
-  const padecimientos = [
+  const allPadecimientos = [
   "Abdomen agudo",
   "Abetalipoproteinemia",
   "Ablación de la placenta",
