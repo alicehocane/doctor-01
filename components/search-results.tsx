@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import DoctorCard from "@/components/doctor-card"
 import { Button } from "@/components/ui/button"
@@ -31,40 +31,97 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalDoctors, setTotalDoctors] = useState(0)
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null)
+  const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot | null>(null)
   const itemsPerPage = 5
+  const pagesStack = useRef<QueryDocumentSnapshot[]>([])
+
+  const buildQuery = (startAfterDoc: QueryDocumentSnapshot | null = null) => {
+    const doctorsRef = collection(db, "doctors")
+    let q
+
+    if (tipo === "ciudad") {
+      q = startAfterDoc
+        ? query(
+            doctorsRef,
+            where("cities", "array-contains", valor),
+            orderBy("fullName"),
+            startAfter(startAfterDoc),
+            limit(itemsPerPage)
+        : query(
+            doctorsRef,
+            where("cities", "array-contains", valor),
+            orderBy("fullName"),
+            limit(itemsPerPage)
+    } else if (tipo === "especialidad") {
+      q = startAfterDoc
+        ? query(
+            doctorsRef,
+            where("specialties", "array-contains", valor),
+            orderBy("fullName"),
+            startAfter(startAfterDoc),
+            limit(itemsPerPage)
+        : query(
+            doctorsRef,
+            where("specialties", "array-contains", valor),
+            orderBy("fullName"),
+            limit(itemsPerPage)
+    } else if (tipo === "padecimiento") {
+      q = startAfterDoc
+        ? query(
+            doctorsRef,
+            where("diseasesTreated", "array-contains", valor),
+            orderBy("fullName"),
+            startAfter(startAfterDoc),
+            limit(itemsPerPage)
+        : query(
+            doctorsRef,
+            where("diseasesTreated", "array-contains", valor),
+            orderBy("fullName"),
+            limit(itemsPerPage)
+    } else {
+      q = startAfterDoc
+        ? query(doctorsRef, orderBy("fullName"), startAfter(startAfterDoc), limit(itemsPerPage))
+        : query(doctorsRef, orderBy("fullName"), limit(itemsPerPage))
+    }
+
+    return q
+  }
+
+  const fetchFilteredCount = async () => {
+    try {
+      const q = buildQuery()
+      const countQuery = q // Use the same query but without limit
+      const countSnapshot = await getDocs(countQuery)
+      return countSnapshot.size
+    } catch (error) {
+      console.error("Error fetching count:", error)
+      return 0
+    }
+  }
 
   useEffect(() => {
     const fetchDoctors = async () => {
       setLoading(true)
       try {
-        const doctorsRef = collection(db, "doctors")
-        let q
+        // Reset pagination state
+        pagesStack.current = []
+        setFirstVisible(null)
+        setLastVisible(null)
+        setCurrentPage(1)
 
-        // Create query based on search criteria
-        if (tipo === "ciudad") {
-          q = query(doctorsRef, where("cities", "array-contains", valor), orderBy("fullName"), limit(itemsPerPage))
-        } else if (tipo === "especialidad") {
-          q = query(doctorsRef, where("specialties", "array-contains", valor), orderBy("fullName"), limit(itemsPerPage))
-        } else if (tipo === "padecimiento") {
-          q = query(
-            doctorsRef,
-            where("diseasesTreated", "array-contains", valor),
-            orderBy("fullName"),
-            limit(itemsPerPage),
-          )
-        } else {
-          q = query(doctorsRef, orderBy("fullName"), limit(itemsPerPage))
-        }
+        // Get filtered count
+        const count = await fetchFilteredCount()
+        setTotalDoctors(count)
 
-        // Get total count (in a real app, you might use a separate counter document)
-        const countQuery = query(doctorsRef)
-        const countSnapshot = await getDocs(countQuery)
-        setTotalDoctors(countSnapshot.size)
-
-        // Get paginated results
+        // Get first page
+        const q = buildQuery()
         const querySnapshot = await getDocs(q)
-        const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
-        setLastVisible(lastVisible)
+        
+        if (querySnapshot.docs.length > 0) {
+          setFirstVisible(querySnapshot.docs[0])
+          setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1])
+          pagesStack.current = [querySnapshot.docs[0]]
+        }
 
         const fetchedDoctors = querySnapshot.docs.map((doc) => ({
           id: doc.id,
@@ -80,7 +137,6 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
     }
 
     fetchDoctors()
-    setCurrentPage(1)
   }, [tipo, valor])
 
   const fetchNextPage = async () => {
@@ -88,41 +144,14 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
 
     setLoading(true)
     try {
-      const doctorsRef = collection(db, "doctors")
-      let q
-
-      // Create query based on search criteria with pagination
-      if (tipo === "ciudad") {
-        q = query(
-          doctorsRef,
-          where("cities", "array-contains", valor),
-          orderBy("fullName"),
-          startAfter(lastVisible),
-          limit(itemsPerPage),
-        )
-      } else if (tipo === "especialidad") {
-        q = query(
-          doctorsRef,
-          where("specialties", "array-contains", valor),
-          orderBy("fullName"),
-          startAfter(lastVisible),
-          limit(itemsPerPage),
-        )
-      } else if (tipo === "padecimiento") {
-        q = query(
-          doctorsRef,
-          where("diseasesTreated", "array-contains", valor),
-          orderBy("fullName"),
-          startAfter(lastVisible),
-          limit(itemsPerPage),
-        )
-      } else {
-        q = query(doctorsRef, orderBy("fullName"), startAfter(lastVisible), limit(itemsPerPage))
-      }
-
+      const q = buildQuery(lastVisible)
       const querySnapshot = await getDocs(q)
-      const newLastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
-      setLastVisible(newLastVisible)
+      
+      if (querySnapshot.docs.length > 0) {
+        const newLastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
+        setLastVisible(newLastVisible)
+        pagesStack.current.push(lastVisible) // Save the previous lastVisible
+      }
 
       const fetchedDoctors = querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -130,8 +159,42 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
       }))
 
       setDoctors(fetchedDoctors)
+      setCurrentPage(prev => prev + 1)
     } catch (error) {
       console.error("Error fetching next page:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchPreviousPage = async () => {
+    if (pagesStack.current.length < 2) return // Need at least one previous page
+
+    setLoading(true)
+    try {
+      // Remove current page from stack
+      pagesStack.current.pop()
+      
+      // Get the previous page's startAfter document
+      const prevStartAfter = pagesStack.current[pagesStack.current.length - 2] || null
+      
+      const q = buildQuery(prevStartAfter)
+      const querySnapshot = await getDocs(q)
+      
+      if (querySnapshot.docs.length > 0) {
+        setFirstVisible(querySnapshot.docs[0])
+        setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1])
+      }
+
+      const fetchedDoctors = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+
+      setDoctors(fetchedDoctors)
+      setCurrentPage(prev => prev - 1)
+    } catch (error) {
+      console.error("Error fetching previous page:", error)
     } finally {
       setLoading(false)
     }
@@ -140,12 +203,9 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
   const handlePageChange = (page: number) => {
     if (page > currentPage) {
       fetchNextPage()
-    } else {
-      // For previous page, we'd need to re-fetch from the beginning
-      // This is a limitation of Firestore pagination
-      // In a real app, you might want to cache previous pages
+    } else if (page < currentPage) {
+      fetchPreviousPage()
     }
-    setCurrentPage(page)
   }
 
   // For demo purposes, we'll use mock data if Firestore is not connected
@@ -176,6 +236,7 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
         },
       ]
       setDoctors(mockDoctors)
+      setTotalDoctors(mockDoctors.length)
     }
   }, [doctors, loading])
 
@@ -191,7 +252,7 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
     )
   }
 
-  // Calculate total pages
+  // Calculate total pages based on filtered results
   const totalPages = Math.ceil(totalDoctors / itemsPerPage)
 
   return (
@@ -221,7 +282,7 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
             variant="outline"
             size="icon"
             onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
+            disabled={currentPage === totalPages || doctors.length < itemsPerPage}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
