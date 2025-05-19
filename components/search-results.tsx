@@ -36,56 +36,71 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
   const pagesStack = useRef<QueryDocumentSnapshot[]>([])
 
   const buildQuery = (startAfterDoc: QueryDocumentSnapshot | null = null) => {
-    const doctorsRef = collection(db, "doctors")
-    let q
+  const doctorsRef = collection(db, "doctors");
+  let q;
 
-    if (tipo === "ciudad") {
-      q = startAfterDoc
-        ? query(
-            doctorsRef,
-            where("cities", "array-contains", valor),
-            orderBy("fullName"),
-            startAfter(startAfterDoc),
-            limit(itemsPerPage)
-        : query(
-            doctorsRef,
-            where("cities", "array-contains", valor),
-            orderBy("fullName"),
-            limit(itemsPerPage)
-    } else if (tipo === "especialidad") {
-      q = startAfterDoc
-        ? query(
-            doctorsRef,
-            where("specialties", "array-contains", valor),
-            orderBy("fullName"),
-            startAfter(startAfterDoc),
-            limit(itemsPerPage)
-        : query(
-            doctorsRef,
-            where("specialties", "array-contains", valor),
-            orderBy("fullName"),
-            limit(itemsPerPage)
-    } else if (tipo === "padecimiento") {
-      q = startAfterDoc
-        ? query(
-            doctorsRef,
-            where("diseasesTreated", "array-contains", valor),
-            orderBy("fullName"),
-            startAfter(startAfterDoc),
-            limit(itemsPerPage)
-        : query(
-            doctorsRef,
-            where("diseasesTreated", "array-contains", valor),
-            orderBy("fullName"),
-            limit(itemsPerPage)
-    } else {
-      q = startAfterDoc
-        ? query(doctorsRef, orderBy("fullName"), startAfter(startAfterDoc), limit(itemsPerPage))
-        : query(doctorsRef, orderBy("fullName"), limit(itemsPerPage))
-    }
-
-    return q
+  if (tipo === "ciudad") {
+    q = startAfterDoc
+      ? query(
+          doctorsRef,
+          where("cities", "array-contains", valor),
+          orderBy("fullName"),
+          startAfter(startAfterDoc),
+          limit(itemsPerPage)
+        )
+      : query(
+          doctorsRef,
+          where("cities", "array-contains", valor),
+          orderBy("fullName"),
+          limit(itemsPerPage)
+        );
+  } else if (tipo === "especialidad") {
+    q = startAfterDoc
+      ? query(
+          doctorsRef,
+          where("specialties", "array-contains", valor),
+          orderBy("fullName"),
+          startAfter(startAfterDoc),
+          limit(itemsPerPage)
+        )
+      : query(
+          doctorsRef,
+          where("specialties", "array-contains", valor),
+          orderBy("fullName"),
+          limit(itemsPerPage)
+        );
+  } else if (tipo === "padecimiento") {
+    q = startAfterDoc
+      ? query(
+          doctorsRef,
+          where("diseasesTreated", "array-contains", valor),
+          orderBy("fullName"),
+          startAfter(startAfterDoc),
+          limit(itemsPerPage)
+        )
+      : query(
+          doctorsRef,
+          where("diseasesTreated", "array-contains", valor),
+          orderBy("fullName"),
+          limit(itemsPerPage)
+        );
+  } else {
+    q = startAfterDoc
+      ? query(
+          doctorsRef,
+          orderBy("fullName"),
+          startAfter(startAfterDoc),
+          limit(itemsPerPage)
+        )
+      : query(
+          doctorsRef,
+          orderBy("fullName"),
+          limit(itemsPerPage)
+        );
   }
+
+  return q;
+};
 
   const fetchFilteredCount = async () => {
     try {
