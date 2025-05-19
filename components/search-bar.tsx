@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Search } from "lucide-react"
+import { Search, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter } from "next/navigation"
@@ -16,6 +16,10 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   const [searchType, setSearchType] = useState<string>("ciudad")
   const [searchValue, setSearchValue] = useState<string>("")
   const [isSearching, setIsSearching] = useState(false)
+  const [loadMoreState, setLoadMoreState] = useState<{
+    especialidad: number
+    padecimiento: number
+  }>({ especialidad: 1, padecimiento: 1 })
 
   // These would come from Firestore in a real implementation
   const ciudades = ["Ciudad de México", "Monterrey", "Guadalajara"]
@@ -3628,39 +3632,67 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   "Úlceras por presión",
   "Úlceras venosas"
 ];
+   const getPaginatedOptions = (type: string) => {
+    const allOptions = type === "especialidad" ? allEspecialidades : allPadecimientos;
+    const loadCount = loadMoreState[type as keyof typeof loadMoreState];
+    
+    if (loadCount === 1) {
+      return allOptions.slice(0, 50);
+    } else if (loadCount === 2) {
+      return allOptions.slice(0, 100);
+    }
+    return allOptions; // Show all
+  };
+
+  const handleLoadMore = (type: string) => {
+    setLoadMoreState(prev => ({
+      ...prev,
+      [type]: prev[type as keyof typeof prev] + 1
+    }));
+  };
+
   const getOptionsForType = () => {
     switch (searchType) {
       case "ciudad":
-        return ciudades
+        return ciudades;
       case "especialidad":
-        return especialidades
+        return getPaginatedOptions("especialidad");
       case "padecimiento":
-        return padecimientos
+        return getPaginatedOptions("padecimiento");
       default:
-        return []
+        return [];
     }
-  }
+  };
+
+  const shouldShowLoadMore = (type: string) => {
+    const allOptions = type === "especialidad" ? allEspecialidades : allPadecimientos;
+    const loadCount = loadMoreState[type as keyof typeof loadMoreState];
+    
+    return allOptions.length > 50 && 
+           (loadCount === 1 || (loadCount === 2 && allOptions.length > 100));
+  };
+
+  const getLoadMoreText = (type: string) => {
+    const loadCount = loadMoreState[type as keyof typeof loadMoreState];
+    return loadCount === 1 ? "Ver más" : "Ver más allá";
+  };
 
   const handleSearch = async () => {
     if (searchValue) {
-      setIsSearching(true)
+      setIsSearching(true);
 
       try {
-        // Track the search
-        console.log(`Initiating search tracking: ${searchType} - ${searchValue}`)
-        await trackSearch(searchType, searchValue)
-        console.log("Search tracking completed")
+        console.log(`Initiating search tracking: ${searchType} - ${searchValue}`);
+        await trackSearch(searchType, searchValue);
+        console.log("Search tracking completed");
       } catch (error) {
-        console.error("Error tracking search:", error)
-        // Continue with navigation even if tracking fails
+        console.error("Error tracking search:", error);
       }
 
-      // Navigate to search results
-      router.push(`/buscar?tipo=${searchType}&valor=${searchValue}`)
-
-      setIsSearching(false)
+      router.push(`/buscar?tipo=${searchType}&valor=${searchValue}`);
+      setIsSearching(false);
     }
-  }
+  };
 
   return (
     <div className={`bg-card rounded-lg shadow-sm p-4 ${className}`}>
@@ -3693,12 +3725,28 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
             <SelectTrigger id="search-value" className="w-full">
               <SelectValue placeholder={`Selecciona ${searchType}`} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[300px] overflow-y-auto">
               {getOptionsForType().map((option) => (
                 <SelectItem key={option} value={option}>
                   {option}
                 </SelectItem>
               ))}
+              
+              {(searchType === "especialidad" || searchType === "padecimiento") && 
+                shouldShowLoadMore(searchType) && (
+                  <div className="relative">
+                    <SelectItem 
+                      value="load-more" 
+                      onSelect={() => handleLoadMore(searchType)}
+                      className="text-primary cursor-pointer"
+                    >
+                      <div className="flex items-center justify-center">
+                        <ChevronDown className="h-4 w-4 mr-2" />
+                        {getLoadMoreText(searchType)}
+                      </div>
+                    </SelectItem>
+                  </div>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -3709,5 +3757,5 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
         </Button>
       </div>
     </div>
-  )
+  );
 }
