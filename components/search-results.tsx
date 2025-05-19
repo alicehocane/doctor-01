@@ -150,7 +150,7 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
       if (querySnapshot.docs.length > 0) {
         const newLastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
         setLastVisible(newLastVisible)
-        pagesStack.current.push(lastVisible) // Save the previous lastVisible
+        pagesStack.current.push(lastVisible) // Save the previous lastVisiblee
       }
 
       const fetchedDoctors = querySnapshot.docs.map((doc) => ({
