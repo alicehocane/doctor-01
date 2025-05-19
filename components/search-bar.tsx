@@ -3639,6 +3639,10 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     
     if (loadCount === 1) return allOptions.slice(0, 50);
     if (loadCount === 2) return allOptions.slice(0, 100);
+    if (loadCount === 3) return allOptions.slice(0, 150);
+    if (loadCount === 4) return allOptions.slice(0, 200);
+    if (loadCount === 5) return allOptions.slice(0, 400);
+    if (loadCount === 6) return allOptions.slice(0, 800);
     return allOptions;
   };
 
