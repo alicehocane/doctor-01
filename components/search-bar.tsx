@@ -3637,12 +3637,9 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     const allOptions = type === "especialidad" ? allEspecialidades : allPadecimientos;
     const loadCount = loadMoreState[type as keyof typeof loadMoreState];
     
-    if (loadCount === 1) {
-      return allOptions.slice(0, 50);
-    } else if (loadCount === 2) {
-      return allOptions.slice(0, 100);
-    }
-    return allOptions; // Show all
+    if (loadCount === 1) return allOptions.slice(0, 50);
+    if (loadCount === 2) return allOptions.slice(0, 100);
+    return allOptions;
   };
 
   const handleLoadMore = (type: string) => {
@@ -3650,48 +3647,35 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
       ...prev,
       [type]: prev[type as keyof typeof prev] + 1
     }));
+    setSearchValue(""); // Clear selection when loading more
   };
 
   const getOptionsForType = () => {
     switch (searchType) {
-      case "ciudad":
-        return ciudades;
-      case "especialidad":
-        return getPaginatedOptions("especialidad");
-      case "padecimiento":
-        return getPaginatedOptions("padecimiento");
-      default:
-        return [];
+      case "ciudad": return ciudades;
+      case "especialidad": return getPaginatedOptions("especialidad");
+      case "padecimiento": return getPaginatedOptions("padecimiento");
+      default: return [];
     }
   };
 
   const shouldShowLoadMore = (type: string) => {
     const allOptions = type === "especialidad" ? allEspecialidades : allPadecimientos;
     const loadCount = loadMoreState[type as keyof typeof loadMoreState];
-    
-    return allOptions.length > 50 && 
-           (loadCount === 1 || (loadCount === 2 && allOptions.length > 100));
-  };
-
-  const getLoadMoreText = (type: string) => {
-    const loadCount = loadMoreState[type as keyof typeof loadMoreState];
-    return loadCount === 1 ? "Ver más" : "Ver más allá";
+    return allOptions.length > 50 * loadCount;
   };
 
   const handleSearch = async () => {
     if (searchValue) {
       setIsSearching(true);
-
       try {
-        console.log(`Initiating search tracking: ${searchType} - ${searchValue}`);
         await trackSearch(searchType, searchValue);
-        console.log("Search tracking completed");
+        router.push(`/buscar?tipo=${searchType}&valor=${searchValue}`);
       } catch (error) {
         console.error("Error tracking search:", error);
+      } finally {
+        setIsSearching(false);
       }
-
-      router.push(`/buscar?tipo=${searchType}&valor=${searchValue}`);
-      setIsSearching(false);
     }
   };
 
@@ -3735,17 +3719,15 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               
               {(searchType === "especialidad" || searchType === "padecimiento") && 
                 shouldShowLoadMore(searchType) && (
-                  <div className="relative">
-                    <SelectItem 
-                      value="load-more" 
-                      onSelect={() => handleLoadMore(searchType)}
-                      className="text-primary cursor-pointer"
-                    >
-                      <div className="flex items-center justify-center">
-                        <ChevronDown className="h-4 w-4 mr-2" />
-                        {getLoadMoreText(searchType)}
-                      </div>
-                    </SelectItem>
+                  <div 
+                    className="relative flex items-center justify-center p-2 text-primary cursor-pointer hover:bg-accent"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleLoadMore(searchType);
+                    }}
+                  >
+                    <ChevronDown className="h-4 w-4 mr-2" />
+                    {loadMoreState[searchType as keyof typeof loadMoreState] === 1 ? "Ver más" : "Ver más allá"}
                   </div>
               )}
             </SelectContent>
