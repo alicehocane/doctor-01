@@ -31,7 +31,7 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalDoctors, setTotalDoctors] = useState(0)
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null)
-  const itemsPerPage = 5
+  const itemsPerPage = 10
 
   // Helper function to calculate priority score
   const calculatePriorityScore = (doctor: DocumentData) => {
