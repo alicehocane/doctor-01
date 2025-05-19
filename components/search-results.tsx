@@ -35,89 +35,90 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
 
   // Helper function to calculate priority score
   const calculatePriorityScore = (doctor: DocumentData) => {
-    let score = 0;
-    
-    // Check specialties
-    if (doctor.specialties?.some((s: string) => s.toLowerCase().includes(valor.toLowerCase()))) {
-      score += 3;
+  let score = 0;
+  
+  // Highest priority: exact match in specialties
+  if (doctor.specialties?.some((s: string) => 
+    s.toLowerCase().includes(valor.toLowerCase()))) {
+    score += 100; // Highest weight
+  }
+  
+  // Medium priority: phone number match
+  if (doctor.phoneNumbers?.some((p: string) => p.includes(valor))) {
+    score += 50;
+  }
+  
+  // Lower priority: diseases treated match
+  if (doctor.diseasesTreated?.some((d: string) => 
+    d.toLowerCase().includes(valor.toLowerCase()))) {
+    score += 10;
+  }
+  
+  return score;
+};
+  
+
+
+useEffect(() => {
+  const fetchDoctors = async () => {
+    setLoading(true);
+    try {
+      const doctorsRef = collection(db, "doctors");
+      let q;
+
+      // Create base query (without limit for initial fetch)
+      if (tipo === "ciudad") {
+        q = query(doctorsRef, where("cities", "array-contains", valor), orderBy("fullName"));
+      } else if (tipo === "especialidad") {
+        q = query(doctorsRef, where("specialties", "array-contains", valor), orderBy("fullName"));
+      } else if (tipo === "padecimiento") {
+        q = query(doctorsRef, where("diseasesTreated", "array-contains", valor), orderBy("fullName"));
+      } else {
+        q = query(doctorsRef, orderBy("fullName"));
+      }
+
+      // Get all matching doctors
+      const querySnapshot = await getDocs(q);
+      setTotalDoctors(querySnapshot.size);
+
+      // Calculate priority scores and sort
+      const allDoctors = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        priorityScore: calculatePriorityScore(doc.data())
+      }));
+
+      const sortedDoctors = allDoctors.sort((a, b) => {
+        // First by priority score (descending)
+        if (b.priorityScore !== a.priorityScore) {
+          return b.priorityScore - a.priorityScore;
+        }
+        // Then alphabetically
+        return a.fullName.localeCompare(b.fullName);
+      });
+
+      // Apply pagination
+      const startIdx = (currentPage - 1) * itemsPerPage;
+      const paginatedDoctors = sortedDoctors.slice(startIdx, startIdx + itemsPerPage);
+
+      setDoctors(paginatedDoctors);
+      
+      // Set last visible for pagination
+      if (querySnapshot.docs.length > startIdx + itemsPerPage) {
+        setLastVisible(querySnapshot.docs[startIdx + itemsPerPage - 1]);
+      } else {
+        setLastVisible(null);
+      }
+
+    } catch (error) {
+      console.error("Error fetching doctors:", error);
+    } finally {
+      setLoading(false);
     }
-    
-    // Check diseases treated
-    if (doctor.diseasesTreated?.some((d: string) => d.toLowerCase().includes(valor.toLowerCase()))) {
-      score += 2;
-    }
-    
-    // Check phone numbers
-    if (doctor.phoneNumbers?.some((p: string) => p.includes(valor))) {
-      score += 1;
-    }
-    
-    return score;
   };
 
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      setLoading(true)
-      try {
-        const doctorsRef = collection(db, "doctors")
-        let q
-
-        // Create query based on search criteria
-        if (tipo === "ciudad") {
-          q = query(doctorsRef, where("cities", "array-contains", valor), orderBy("fullName"))
-        } else if (tipo === "especialidad") {
-          q = query(doctorsRef, where("specialties", "array-contains", valor), orderBy("fullName"))
-        } else if (tipo === "padecimiento") {
-          q = query(
-            doctorsRef,
-            where("diseasesTreated", "array-contains", valor),
-            orderBy("fullName")
-          )
-        } else {
-          q = query(doctorsRef, orderBy("fullName"))
-        }
-
-        // Get filtered count
-        const countSnapshot = await getDocs(q)
-        setTotalDoctors(countSnapshot.size)
-
-        // Get all matching doctors (we'll sort and paginate client-side)
-        const allDocs = await getDocs(q)
-        const allDoctors = allDocs.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          priorityScore: calculatePriorityScore(doc.data())
-        }))
-
-        // Sort by priority score (descending) then by name
-        const sortedDoctors = allDoctors.sort((a, b) => {
-          if (b.priorityScore !== a.priorityScore) {
-            return b.priorityScore - a.priorityScore
-          }
-          return a.fullName.localeCompare(b.fullName)
-        })
-
-        // Apply pagination
-        const startIdx = (currentPage - 1) * itemsPerPage
-        const paginatedDoctors = sortedDoctors.slice(startIdx, startIdx + itemsPerPage)
-        
-        // Set last visible document for pagination
-        if (allDocs.docs.length > startIdx + itemsPerPage) {
-          setLastVisible(allDocs.docs[startIdx + itemsPerPage - 1])
-        } else {
-          setLastVisible(null)
-        }
-
-        setDoctors(paginatedDoctors)
-      } catch (error) {
-        console.error("Error fetching doctors:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchDoctors()
-  }, [tipo, valor, currentPage])
+  fetchDoctors();
+}, [tipo, valor, currentPage]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
