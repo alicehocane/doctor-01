@@ -117,12 +117,12 @@ export default function FeaturedSections() {
   }
 
   const renderItems = (items: string[], section: string, expanded: boolean) => {
-    const displayItems = expanded ? items : items.slice(0, 7)
+    const displayItems = expanded ? items : items.slice(0, 8)
 
     if (loading) {
       return (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-          {Array.from({ length: 7 }).map((_, index) => (
+          {Array.from({ length: 8 }).map((_, index) => (
             <div key={index} className="h-8 bg-muted animate-pulse rounded"></div>
           ))}
         </div>
