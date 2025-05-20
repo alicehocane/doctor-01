@@ -1,30 +1,41 @@
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-export function middleware(request: NextRequest) {
-  // Get the pathname of the request
-  const path = request.nextUrl.pathname
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next()
+  const pathname = req.nextUrl.pathname
 
-  // Define paths that are considered public (accessible without authentication)
-  const isPublicPath = path === "/admin/login"
+  // Create a Supabase client configured to use cookies
+  const supabase = createMiddlewareClient({ req, res })
 
-  // Skip middleware for the login page
-  if (isPublicPath) {
-    return NextResponse.next()
+  // Refresh session if expired
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  // Public routes that don't require authentication
+  const publicRoutes = ["/admin/login", "/admin/reset-password"]
+  const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))
+
+  // If user is trying to access admin routes
+  if (pathname.startsWith("/admin") && !isPublicRoute) {
+    // If not logged in, redirect to login
+    if (!session) {
+      const redirectUrl = new URL("/admin/login", req.url)
+      return NextResponse.redirect(redirectUrl)
+    }
   }
 
-  // Get the token from the cookies
-  const token = request.cookies.get("session")?.value || ""
-
-  // Redirect logic for admin routes
-  if (path.startsWith("/admin") && !token) {
-    return NextResponse.redirect(new URL("/admin/login", request.url))
+  // If already logged in and trying to access login page, redirect to admin
+  if (pathname === "/admin/login" && session) {
+    const redirectUrl = new URL("/admin", req.url)
+    return NextResponse.redirect(redirectUrl)
   }
 
-  return NextResponse.next()
+  return res
 }
 
-// Configure the middleware to run only on specific paths
 export const config = {
   matcher: ["/admin/:path*"],
 }
