@@ -76,7 +76,7 @@ export default function BulkUploadPage() {
       // Límite de 20MB
       toast({
         title: "Archivo demasiado grande",
-        description: "El archivo no debe exceder los 20MB. Por favor, divida los datos en archivos más pequeños.",
+        description: "El archivo no debe exceder los 4MB. Por favor, divida los datos en archivos más pequeños.",
         variant: "destructive",
       })
       return
@@ -518,10 +518,10 @@ export default function BulkUploadPage() {
                 <p className="text-xs text-muted-foreground mt-1">
                   Ejemplo: "400, 400, 400, 400" procesará los primeros 400 registros, luego 400, etc.
                 </p>
-                <p className="text-xs text-muted-foreground mt-1 font-medium">
+                {/* <p className="text-xs text-muted-foreground mt-1 font-medium">
                   Nota: Firestore tiene un límite de {FIRESTORE_BATCH_LIMIT} documentos por operación de escritura por
                   lotes. Los valores mayores a {FIRESTORE_BATCH_LIMIT} serán ajustados automáticamente.
-                </p>
+                </p> */}
               </div>
 
               <div>
