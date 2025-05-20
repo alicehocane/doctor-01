@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Search, Plus, Edit, Trash2, Eye, ChevronLeft, ChevronRight, AlertCircle, X, RefreshCw } from "lucide-react"
+import { Search, Plus, Edit, Trash2, Eye, ChevronLeft, ChevronRight, AlertCircle, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -22,15 +22,6 @@ import { db } from "@/lib/firebase"
 import { useToast } from "@/hooks/use-toast"
 import { logActivity } from "@/lib/activity-logger"
 
-// Cache keys
-const CACHE_KEYS = {
-  DOCTORS: 'doctorsList_doctors',
-  TIMESTAMP: 'doctorsList_timestamp'
-}
-
-// Cache expiration time (1 hour)
-const CACHE_EXPIRY = 60 * 60 * 1000
-
 export default function DoctorsList() {
   const { toast } = useToast()
   const [doctors, setDoctors] = useState<any[]>([])
@@ -43,7 +34,6 @@ export default function DoctorsList() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [doctorToDelete, setDoctorToDelete] = useState<string | null>(null)
   const [connectionIssue, setConnectionIssue] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
 
   // Bulk operations state
   const [selectedDoctors, setSelectedDoctors] = useState<string[]>([])
@@ -52,99 +42,73 @@ export default function DoctorsList() {
 
   const itemsPerPage = 10
 
-  const getCachedData = (key: string) => {
-    const cached = localStorage.getItem(key)
-    return cached ? JSON.parse(cached) : null
-  }
-
-  const setCachedData = (key: string, data: any) => {
-    localStorage.setItem(key, JSON.stringify(data))
-    localStorage.setItem(CACHE_KEYS.TIMESTAMP, new Date().getTime().toString())
-  }
-
-  const isCacheValid = () => {
-    const cachedTime = localStorage.getItem(CACHE_KEYS.TIMESTAMP)
-    if (!cachedTime) return false
-    return (new Date().getTime() - parseInt(cachedTime)) < CACHE_EXPIRY
-  }
-
-  const fetchDoctors = async (forceRefresh = false) => {
-    setLoading(true)
-    setError(null)
-    setConnectionIssue(false)
-
-    try {
-      // Check cache first if not forcing refresh
-      if (!forceRefresh && isCacheValid()) {
-        const cachedDoctors = getCachedData(CACHE_KEYS.DOCTORS)
-        if (cachedDoctors) {
-          setDoctors(cachedDoctors)
-          setFilteredDoctors(cachedDoctors)
-          setLoading(false)
-          return
-        }
-      }
-
-      if (!db) {
-        throw new Error("Firestore is not initialized")
-      }
-
-      const doctorsRef = collection(db, "doctors")
-      let fetchedDoctors: any[] = []
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      setLoading(true)
+      setError(null)
+      setConnectionIssue(false)
 
       try {
-        // Try to fetch with createdAt sorting first
-        const createdAtQuery = query(doctorsRef, orderBy("createdAt", "desc"))
-        const createdAtSnapshot = await getDocs(createdAtQuery)
+        if (!db) {
+          throw new Error("Firestore is not initialized")
+        }
 
-        fetchedDoctors = createdAtSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-      } catch (sortError) {
-        console.warn("Error fetching with createdAt sort, falling back to name sort:", sortError)
-      }
+        // First try to get doctors sorted by createdAt
+        const doctorsRef = collection(db, "doctors")
+        let fetchedDoctors: any[] = []
 
-      // If no results with createdAt, fall back to fullName sorting
-      if (fetchedDoctors.length === 0) {
-        const nameQuery = query(doctorsRef, orderBy("fullName"))
-        const nameSnapshot = await getDocs(nameQuery)
+        try {
+          // Try to fetch with createdAt sorting first
+          const createdAtQuery = query(doctorsRef, orderBy("createdAt", "desc"))
+          const createdAtSnapshot = await getDocs(createdAtQuery)
 
-        fetchedDoctors = nameSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-      }
+          fetchedDoctors = createdAtSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
 
-      // If we still have no results, try getting all doctors without sorting
-      if (fetchedDoctors.length === 0) {
-        const allDocsSnapshot = await getDocs(doctorsRef)
+          console.log("Fetched doctors with createdAt:", fetchedDoctors.length)
+        } catch (sortError) {
+          console.warn("Error fetching with createdAt sort, falling back to name sort:", sortError)
+        }
 
-        fetchedDoctors = allDocsSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-      }
+        // If no results with createdAt, fall back to fullName sorting
+        if (fetchedDoctors.length === 0) {
+          const nameQuery = query(doctorsRef, orderBy("fullName"))
+          const nameSnapshot = await getDocs(nameQuery)
 
-      setDoctors(fetchedDoctors)
-      setFilteredDoctors(fetchedDoctors)
-      setCachedData(CACHE_KEYS.DOCTORS, fetchedDoctors)
-    } catch (error: any) {
-      console.error("Error fetching doctors:", error)
-      setError(error.message || "Failed to fetch doctors")
+          fetchedDoctors = nameSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
 
-      // Check if this might be a browser extension blocking issue
-      if (error.message.includes("timeout") || error.code === "permission-denied" || error.name === "FirebaseError") {
-        setConnectionIssue(true)
-      }
+          console.log("Fetched doctors with fullName:", fetchedDoctors.length)
+        }
 
-      // Try to use cached data if available
-      const cachedDoctors = getCachedData(CACHE_KEYS.DOCTORS)
-      if (cachedDoctors) {
-        setDoctors(cachedDoctors)
-        setFilteredDoctors(cachedDoctors)
-      } else {
-        // Fallback to mock data only if no cache exists
+        // If we still have no results, try getting all doctors without sorting
+        if (fetchedDoctors.length === 0) {
+          const allDocsSnapshot = await getDocs(doctorsRef)
+
+          fetchedDoctors = allDocsSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+
+          console.log("Fetched all doctors without sorting:", fetchedDoctors.length)
+        }
+
+        setDoctors(fetchedDoctors)
+        setFilteredDoctors(fetchedDoctors)
+      } catch (error: any) {
+        console.error("Error fetching doctors:", error)
+        setError(error.message || "Failed to fetch doctors")
+
+        // Check if this might be a browser extension blocking issue
+        if (error.message.includes("timeout") || error.code === "permission-denied" || error.name === "FirebaseError") {
+          setConnectionIssue(true)
+        }
+
+        // Fallback to mock data for demo purposes
         const mockDoctors = [
           {
             id: "mock1",
@@ -163,15 +127,13 @@ export default function DoctorsList() {
         ]
         setDoctors(mockDoctors)
         setFilteredDoctors(mockDoctors)
+      } finally {
+        setLoading(false)
       }
-    } finally {
-      setLoading(false)
     }
-  }
 
-  useEffect(() => {
     fetchDoctors()
-  }, [refreshKey])
+  }, [])
 
   // Filter doctors based on search criteria
   useEffect(() => {
@@ -233,11 +195,9 @@ export default function DoctorsList() {
         })
       }
 
-      // Update local state and cache
-      const updatedDoctors = doctors.filter((doctor) => doctor.id !== doctorToDelete)
-      setDoctors(updatedDoctors)
-      setFilteredDoctors(updatedDoctors)
-      setCachedData(CACHE_KEYS.DOCTORS, updatedDoctors)
+      // Update local state
+      setDoctors(doctors.filter((doctor) => doctor.id !== doctorToDelete))
+      setFilteredDoctors(filteredDoctors.filter((doctor) => doctor.id !== doctorToDelete))
 
       toast({
         title: "Médico eliminado",
@@ -330,11 +290,10 @@ export default function DoctorsList() {
           entityType: "doctors",
         })
 
-        // Update local state and cache
+        // Update local state
         const remainingDoctors = doctors.filter((doctor) => !selectedDoctors.includes(doctor.id))
         setDoctors(remainingDoctors)
         setFilteredDoctors(remainingDoctors)
-        setCachedData(CACHE_KEYS.DOCTORS, remainingDoctors)
 
         toast({
           title: "Médicos eliminados",
@@ -355,10 +314,6 @@ export default function DoctorsList() {
     }
   }
 
-  const refreshDoctors = () => {
-    setRefreshKey((prev) => prev + 1)
-  }
-
   // Check if all visible doctors are selected
   const allSelected =
     paginatedDoctors.length > 0 && paginatedDoctors.every((doctor) => selectedDoctors.includes(doctor.id))
@@ -374,18 +329,12 @@ export default function DoctorsList() {
           <p className="text-muted-foreground">Gestiona los médicos en el directorio.</p>
         </div>
 
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={refreshDoctors}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Actualizar
-          </Button>
-          <Button asChild>
-            <Link href="/admin/doctors/add">
-              <Plus className="h-4 w-4 mr-2" />
-              Agregar Médico
-            </Link>
-          </Button>
-        </div>
+        <Button asChild>
+          <Link href="/admin/doctors/add">
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar Médico
+          </Link>
+        </Button>
       </div>
 
       {connectionIssue && (
