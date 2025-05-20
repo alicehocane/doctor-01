@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -9,10 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
-import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "firebase/auth"
-import { initializeApp } from "firebase/app"
-import { getAuth } from "firebase/auth"
+import { AlertCircle } from 'lucide-react'
+import { createClient } from "@/lib/supabase/client"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -20,57 +17,60 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [envStatus, setEnvStatus] = useState<Record<string, boolean>>({
-    apiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: !!process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: !!process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: !!process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  })
+  const [resetSent, setResetSent] = useState(false)
+  const [isResetMode, setIsResetMode] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const supabase = createClient()
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
     try {
-      // Initialize Firebase directly
-      const firebaseConfig = {
-        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-        measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-      }
+      // Sign in with Supabase
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-      const app = initializeApp(firebaseConfig)
-      const auth = getAuth(app)
-
-      // Set persistence to LOCAL to persist the user session
-      await setPersistence(auth, browserLocalPersistence)
-
-      // Sign in
-      await signInWithEmailAndPassword(auth, email, password)
-
-      // Set a session cookie (for middleware)
-      document.cookie = `session=true; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict;`
+      if (signInError) throw signInError
 
       // Redirect to admin dashboard
       router.push("/admin")
+      router.refresh()
     } catch (error: any) {
       console.error("Login error:", error)
 
-      // Handle different Firebase auth errors
-      if (error.code === "auth/invalid-credential") {
+      // Handle different Supabase auth errors
+      if (error.message.includes("Invalid login")) {
         setError("Credenciales inválidas. Por favor, verifica tu correo y contraseña.")
-      } else if (error.code === "auth/too-many-requests") {
+      } else if (error.message.includes("rate limit")) {
         setError("Demasiados intentos fallidos. Por favor, intenta más tarde.")
       } else {
-        setError(`Error al iniciar sesión: ${error.message || error.code || "Unknown error"}`)
+        setError(`Error al iniciar sesión: ${error.message || "Unknown error"}`)
       }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/admin/reset-password`,
+      })
+
+      if (error) throw error
+
+      setResetSent(true)
+    } catch (error: any) {
+      console.error("Password reset error:", error)
+      setError(`Error al enviar el correo de recuperación: ${error.message || "Unknown error"}`)
     } finally {
       setLoading(false)
     }
@@ -80,8 +80,14 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 gap-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Iniciar Sesión</CardTitle>
-          <CardDescription>Ingresa tus credenciales para acceder al panel de administración</CardDescription>
+          <CardTitle className="text-2xl font-bold">
+            {isResetMode ? "Recuperar Contraseña" : "Iniciar Sesión"}
+          </CardTitle>
+          <CardDescription>
+            {isResetMode
+              ? "Ingresa tu correo electrónico para recibir un enlace de recuperación"
+              : "Ingresa tus credenciales para acceder al panel de administración"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -90,7 +96,16 @@ export default function LoginPage() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <form onSubmit={handleSubmit} className="space-y-4">
+
+          {resetSent && (
+            <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
+              <AlertDescription>
+                Se ha enviado un correo electrónico con instrucciones para restablecer tu contraseña.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={isResetMode ? handlePasswordReset : handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Correo Electrónico</Label>
               <Input
@@ -102,39 +117,51 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Contraseña</Label>
+
+            {!isResetMode && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto text-sm"
+                    type="button"
+                    onClick={() => setIsResetMode(true)}
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </Button>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
               </div>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+            )}
+
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+              {loading
+                ? isResetMode
+                  ? "Enviando..."
+                  : "Iniciando sesión..."
+                : isResetMode
+                  ? "Enviar correo de recuperación"
+                  : "Iniciar Sesión"}
             </Button>
+
+            {isResetMode && (
+              <Button type="button" variant="outline" className="w-full" onClick={() => setIsResetMode(false)}>
+                Volver al inicio de sesión
+              </Button>
+            )}
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">Panel de administración exclusivo para personal autorizado</p>
         </CardFooter>
       </Card>
-
-      {/* <div className="w-full max-w-md mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-md">
-        <h3 className="font-medium mb-2">Firebase Environment Variables Status:</h3>
-        <ul className="text-sm space-y-1">
-          <li>API Key: {envStatus.apiKey ? "✅ Set" : "❌ Not Set"}</li>
-          <li>Auth Domain: {envStatus.authDomain ? "✅ Set" : "❌ Not Set"}</li>
-          <li>Project ID: {envStatus.projectId ? "✅ Set" : "❌ Not Set"}</li>
-          <li>Storage Bucket: {envStatus.storageBucket ? "✅ Set" : "❌ Not Set"}</li>
-          <li>Messaging Sender ID: {envStatus.messagingSenderId ? "✅ Set" : "❌ Not Set"}</li>
-          <li>App ID: {envStatus.appId ? "✅ Set" : "❌ Not Set"}</li>
-        </ul>
-      </div> */}
     </div>
   )
 }
