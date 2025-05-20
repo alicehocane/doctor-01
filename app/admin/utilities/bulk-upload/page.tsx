@@ -588,13 +588,9 @@ export default function BulkUploadPage() {
               </p>
               <p className="mt-1">Retraso entre lotes: {retrasoEntreLotes} ms</p>
               <p className="mt-1">
-                Firestore tiene un límite de {FIRESTORE_BATCH_LIMIT} documentos por operación de escritura por lotes.
-                Los lotes se dividirán automáticamente si es necesario.
-              </p>
-              <p className="mt-1">
                 Modo de validación: {ignorarCamposFaltantes ? "Flexible (ignora campos faltantes)" : "Estricto"}
               </p>
-              <p className="mt-1">Tamaño máximo recomendado: 20MB o 5000 registros por carga.</p>
+              <p className="mt-1">Tamaño máximo recomendado: 4MB o 400 registros por carga.</p>
             </AlertDescription>
           </Alert>
 
