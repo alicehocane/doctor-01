@@ -597,7 +597,7 @@ export default function BulkUploadPage() {
           <div>
             <p className="text-sm text-muted-foreground my-4">
               El archivo debe contener un array de objetos, cada uno con los datos de un médico. Campos recomendados:
-              fullName, licenseNumber, specialties, cities, phoneNumbers.
+              Nombre completo, Número de licencia, Especialidades, enfocado en, Enfermedades tratadas, Ciudades, Números de teléfono.
               {ignorarCamposFaltantes && " Los campos faltantes se completarán con valores predeterminados."}
             </p>
 
@@ -620,7 +620,7 @@ export default function BulkUploadPage() {
                 id="json-data"
                 value={jsonData}
                 onChange={(e) => setJsonData(e.target.value)}
-                placeholder='[{"fullName": "Dr. Juan Pérez", "licenseNumber": "12345", "specialties": ["Cardiología"], "cities": ["Monterrey"], "phoneNumbers": ["8112345678"]}]'
+                placeholder='[{"fullName": "Dr. Juan Pérez", "licenseNumber": "12345", "specialties": ["Cardiología"], "focusedon": ["Arritmias"], "diseasesTreated": ["Síncope"], "cities": ["Monterrey"], "phoneNumbers": ["8112345678"]}]'
                 className="min-h-[200px] font-mono text-sm"
                 disabled={estaSubiendo}
               />
