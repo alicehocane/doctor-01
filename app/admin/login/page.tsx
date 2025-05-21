@@ -17,7 +17,6 @@ import {
 } from "firebase/auth"
 import { initializeApp } from "firebase/app"
 
-// Initialize Firebase outside the component to prevent multiple initializations
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -28,7 +27,6 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 }
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
 
@@ -48,21 +46,12 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // Set persistence to LOCAL to persist the user session
       await setPersistence(auth, browserLocalPersistence)
-
-      // Sign in
       await signInWithEmailAndPassword(auth, email, password)
-
-      // Set a session cookie (for middleware)
       document.cookie = `session=true; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict;`
-
-      // Redirect to admin dashboard
       router.push("/admin")
     } catch (error: any) {
       console.error("Login error:", error)
-
-      // Handle different Firebase auth errors
       if (error.code === "auth/invalid-credential") {
         setError("Credenciales inválidas. Por favor, verifica tu correo y contraseña.")
       } else if (error.code === "auth/too-many-requests") {
@@ -145,19 +134,33 @@ export default function LoginPage() {
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
                     required
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.preventDefault()
+                    }}
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Enviando correo..." : "Enviar enlace de restablecimiento"}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full" 
-                  onClick={() => setShowResetForm(false)}
-                  disabled={loading}
-                >
-                  Cancelar
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    type="button"  // Changed to button to prevent form submission
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={() => {
+                      setShowResetForm(false)
+                      setResetEmail("")
+                      setError(null)
+                    }}
+                    disabled={loading}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={loading}
+                  >
+                    {loading ? "Enviando correo..." : "Enviar enlace"}
+                  </Button>
+                </div>
               </form>
             )
           ) : (
@@ -176,13 +179,13 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Contraseña</Label>
-                  <Button 
-                    variant="link" 
-                    className="p-0 h-auto" 
+                  <button 
+                    type="button"  // Changed to regular button
+                    className="text-sm font-medium text-primary hover:underline p-0 h-auto" 
                     onClick={() => setShowResetForm(true)}
                   >
                     ¿Olvidaste tu contraseña?
-                  </Button>
+                  </button>
                 </div>
                 <Input
                   id="password"
