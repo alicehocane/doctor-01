@@ -135,7 +135,33 @@ export default function LoginPage() {
                 </Button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handlePasswordReset} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">Correo Electrónico</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="admin@ejemplo.com"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Enviando correo..." : "Enviar enlace de restablecimiento"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={() => setShowResetForm(false)}
+                  disabled={loading}
+                >
+                  Cancelar
+                </Button>
+              </form>
+            )
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Correo Electrónico</Label>
                 <Input
@@ -150,13 +176,13 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Contraseña</Label>
-                  <button 
-                    type="button" // Important: Prevents form submission
-                    className="text-sm font-medium text-primary hover:underline p-0 h-auto" 
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto" 
                     onClick={() => setShowResetForm(true)}
                   >
                     ¿Olvidaste tu contraseña?
-                  </button>
+                  </Button>
                 </div>
                 <Input
                   id="password"
@@ -170,43 +196,6 @@ export default function LoginPage() {
                 {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
               </Button>
             </form>
-
-            {showResetForm && (
-              <form onSubmit={handlePasswordReset} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reset-email">Correo Electrónico</Label>
-                  <Input
-                    id="reset-email"
-                    type="email"
-                    placeholder="admin@ejemplo.com"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    type="button" // Important: Prevents form submission
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={() => {
-                      setShowResetForm(false)
-                      setResetEmail("")
-                      setError(null)
-                    }}
-                    disabled={loading}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={loading}
-                  >
-                    {loading ? "Enviando correo..." : "Enviar enlace"}
-                  </Button>
-                </div>
-              </form>
           )}
         </CardContent>
         <CardFooter className="flex justify-center">
