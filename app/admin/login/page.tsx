@@ -14,7 +14,7 @@ import {
   setPersistence, 
   browserLocalPersistence 
 } from "firebase/auth"
-import { auth } from "@/lib/firebase" // Create this file
+import { auth } from "@/lib/firebase"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,11 +22,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [showResetForm, setShowResetForm] = useState(false)
-  const [resetEmail, setResetEmail] = useState("")
-  const [resetSent, setResetSent] = useState(false)
+  const [mostrarFormularioReset, setMostrarFormularioReset] = useState(false)
+  const [emailReset, setEmailReset] = useState("")
+  const [resetEnviado, setResetEnviado] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const manejarLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
@@ -35,39 +35,39 @@ export default function LoginPage() {
       await setPersistence(auth, browserLocalPersistence)
       await signInWithEmailAndPassword(auth, email, password)
 
-      // Set a session cookie (for middleware)
-      document.cookie = `session=true; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict;`
+      // Configurar cookie de sesión
+      document.cookie = `sesion=true; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict;`
 
-      // Redirect to admin dashboard
+      // Redirigir al panel de administración
       router.push("/admin")
     } catch (error: any) {
-      console.error("Login error:", error)
+      console.error("Error de login:", error)
       if (error.code === "auth/invalid-credential") {
-        setError("Invalid credentials. Please check your email and password.")
+        setError("Credenciales inválidas. Por favor verifica tu correo y contraseña.")
       } else if (error.code === "auth/too-many-requests") {
-        setError("Too many failed attempts. Please try again later.")
+        setError("Demasiados intentos fallidos. Por favor intenta más tarde.")
       } else {
-        setError(`Login error: ${error.message || error.code || "Unknown error"}`)
+        setError(`Error al iniciar sesión: ${error.message || error.code || "Error desconocido"}`)
       }
     } finally {
       setLoading(false)
     }
   }
 
-  const handlePasswordReset = async (e: React.FormEvent) => {
+  const manejarResetContraseña = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
     try {
-      await sendPasswordResetEmail(auth, resetEmail)
-      setResetSent(true)
+      await sendPasswordResetEmail(auth, emailReset)
+      setResetEnviado(true)
     } catch (error: any) {
-      console.error("Password reset error:", error)
+      console.error("Error al resetear contraseña:", error)
       if (error.code === "auth/user-not-found") {
-        setError("No account found with this email address.")
+        setError("No se encontró una cuenta con este correo electrónico.")
       } else {
-        setError(`Password reset error: ${error.message || error.code || "Unknown error"}`)
+        setError(`Error al restablecer contraseña: ${error.message || error.code || "Error desconocido"}`)
       }
     } finally {
       setLoading(false)
@@ -77,12 +77,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 gap-4">
       <Card className="w-full max-w-md">
-        {showResetForm ? (
+        {mostrarFormularioReset ? (
           <>
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
+              <CardTitle className="text-2xl font-bold">Restablecer Contraseña</CardTitle>
               <CardDescription>
-                Enter your email to receive a password reset link
+                Ingresa tu correo electrónico para recibir un enlace de restablecimiento
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -92,28 +92,28 @@ export default function LoginPage() {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              {resetSent ? (
+              {resetEnviado ? (
                 <Alert className="mb-4">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Password reset email sent to {resetEmail}. Please check your inbox.
+                    Se ha enviado un correo para restablecer la contraseña a {emailReset}. Por favor revisa tu bandeja de entrada.
                   </AlertDescription>
                 </Alert>
               ) : (
-                <form onSubmit={handlePasswordReset} className="space-y-4">
+                <form onSubmit={manejarResetContraseña} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="reset-email">Email</Label>
+                    <Label htmlFor="email-reset">Correo Electrónico</Label>
                     <Input
-                      id="reset-email"
+                      id="email-reset"
                       type="email"
-                      placeholder="admin@example.com"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder="admin@ejemplo.com"
+                      value={emailReset}
+                      onChange={(e) => setEmailReset(e.target.value)}
                       required
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Sending..." : "Send Reset Link"}
+                    {loading ? "Enviando..." : "Enviar Enlace"}
                   </Button>
                 </form>
               )}
@@ -122,20 +122,20 @@ export default function LoginPage() {
               <Button 
                 variant="link" 
                 onClick={() => {
-                  setShowResetForm(false)
-                  setResetSent(false)
-                  setResetEmail("")
+                  setMostrarFormularioReset(false)
+                  setResetEnviado(false)
+                  setEmailReset("")
                 }}
               >
-                Back to login
+                Volver al inicio de sesión
               </Button>
             </CardFooter>
           </>
         ) : (
           <>
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold">Login</CardTitle>
-              <CardDescription>Enter your credentials to access the admin panel</CardDescription>
+              <CardTitle className="text-2xl font-bold">Iniciar Sesión</CardTitle>
+              <CardDescription>Ingresa tus credenciales para acceder al panel de administración</CardDescription>
             </CardHeader>
             <CardContent>
               {error && (
@@ -144,13 +144,13 @@ export default function LoginPage() {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={manejarLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Correo Electrónico</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="admin@example.com"
+                    placeholder="admin@ejemplo.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -158,14 +158,14 @@ export default function LoginPage() {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password">Contraseña</Label>
                     <Button 
                       variant="link" 
                       className="p-0 h-auto" 
                       type="button"
-                      onClick={() => setShowResetForm(true)}
+                      onClick={() => setMostrarFormularioReset(true)}
                     >
-                      Forgot password?
+                      ¿Olvidaste tu contraseña?
                     </Button>
                   </div>
                   <Input
@@ -177,12 +177,12 @@ export default function LoginPage() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Logging in..." : "Login"}
+                  {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
                 </Button>
               </form>
             </CardContent>
             <CardFooter className="flex justify-center">
-              <p className="text-sm text-muted-foreground">Admin panel - authorized personnel only</p>
+              <p className="text-sm text-muted-foreground">Panel de administración - solo personal autorizado</p>
             </CardFooter>
           </>
         )}
