@@ -1,5 +1,6 @@
 "use client"
 
+import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -10,11 +11,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import { 
   signInWithEmailAndPassword, 
-  sendPasswordResetEmail,
   setPersistence, 
-  browserLocalPersistence 
+  browserLocalPersistence,
+  sendPasswordResetEmail 
 } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+import { initializeApp } from "firebase/app"
+import { getAuth } from "firebase/app"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,52 +24,75 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [mostrarFormularioReset, setMostrarFormularioReset] = useState(false)
-  const [emailReset, setEmailReset] = useState("")
-  const [resetEnviado, setResetEnviado] = useState(false)
+  const [showResetForm, setShowResetForm] = useState(false)
+  const [resetEmailSent, setResetEmailSent] = useState(false)
+  const [resetEmail, setResetEmail] = useState("")
 
-  const manejarLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
     try {
+      const firebaseConfig = {
+        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+      }
+
+      const app = initializeApp(firebaseConfig)
+      const auth = getAuth(app)
+
       await setPersistence(auth, browserLocalPersistence)
       await signInWithEmailAndPassword(auth, email, password)
 
-      // Configurar cookie de sesión
-      document.cookie = `sesion=true; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict;`
-
-      // Redirigir al panel de administración
+      document.cookie = `session=true; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict;`
       router.push("/admin")
     } catch (error: any) {
-      console.error("Error de login:", error)
+      console.error("Login error:", error)
       if (error.code === "auth/invalid-credential") {
-        setError("Credenciales inválidas. Por favor verifica tu correo y contraseña.")
+        setError("Credenciales inválidas. Por favor, verifica tu correo y contraseña.")
       } else if (error.code === "auth/too-many-requests") {
-        setError("Demasiados intentos fallidos. Por favor intenta más tarde.")
+        setError("Demasiados intentos fallidos. Por favor, intenta más tarde.")
       } else {
-        setError(`Error al iniciar sesión: ${error.message || error.code || "Error desconocido"}`)
+        setError(`Error al iniciar sesión: ${error.message || error.code || "Unknown error"}`)
       }
     } finally {
       setLoading(false)
     }
   }
 
-  const manejarResetContraseña = async (e: React.FormEvent) => {
+  const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
     try {
-      await sendPasswordResetEmail(auth, emailReset)
-      setResetEnviado(true)
+      const firebaseConfig = {
+        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+      }
+
+      const app = initializeApp(firebaseConfig)
+      const auth = getAuth(app)
+
+      await sendPasswordResetEmail(auth, resetEmail)
+      setResetEmailSent(true)
     } catch (error: any) {
-      console.error("Error al resetear contraseña:", error)
+      console.error("Password reset error:", error)
       if (error.code === "auth/user-not-found") {
-        setError("No se encontró una cuenta con este correo electrónico.")
+        setError("No existe una cuenta con este correo electrónico.")
       } else {
-        setError(`Error al restablecer contraseña: ${error.message || error.code || "Error desconocido"}`)
+        setError(`Error al enviar el correo de restablecimiento: ${error.message || error.code || "Unknown error"}`)
       }
     } finally {
       setLoading(false)
@@ -77,115 +102,109 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 gap-4">
       <Card className="w-full max-w-md">
-        {mostrarFormularioReset ? (
-          <>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold">Restablecer Contraseña</CardTitle>
-              <CardDescription>
-                Ingresa tu correo electrónico para recibir un enlace de restablecimiento
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {error && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              {resetEnviado ? (
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">
+            {showResetForm ? "Restablecer Contraseña" : "Iniciar Sesión"}
+          </CardTitle>
+          <CardDescription>
+            {showResetForm 
+              ? "Ingresa tu correo electrónico para recibir un enlace de restablecimiento" 
+              : "Ingresa tus credenciales para acceder al panel de administración"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {showResetForm ? (
+            resetEmailSent ? (
+              <div className="space-y-4">
                 <Alert className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Se ha enviado un correo para restablecer la contraseña a {emailReset}. Por favor revisa tu bandeja de entrada.
+                    Se ha enviado un correo electrónico a {resetEmail} con instrucciones para restablecer tu contraseña.
                   </AlertDescription>
                 </Alert>
-              ) : (
-                <form onSubmit={manejarResetContraseña} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email-reset">Correo Electrónico</Label>
-                    <Input
-                      id="email-reset"
-                      type="email"
-                      placeholder="admin@ejemplo.com"
-                      value={emailReset}
-                      onChange={(e) => setEmailReset(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Enviando..." : "Enviar Enlace"}
-                  </Button>
-                </form>
-              )}
-            </CardContent>
-            <CardFooter className="flex justify-center">
-              <Button 
-                variant="link" 
-                onClick={() => {
-                  setMostrarFormularioReset(false)
-                  setResetEnviado(false)
-                  setEmailReset("")
-                }}
-              >
-                Volver al inicio de sesión
-              </Button>
-            </CardFooter>
-          </>
-        ) : (
-          <>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold">Iniciar Sesión</CardTitle>
-              <CardDescription>Ingresa tus credenciales para acceder al panel de administración</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {error && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              <form onSubmit={manejarLogin} className="space-y-4">
+                <Button 
+                  className="w-full" 
+                  onClick={() => {
+                    setShowResetForm(false)
+                    setResetEmailSent(false)
+                  }}
+                >
+                  Volver al inicio de sesión
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={handlePasswordReset} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Correo Electrónico</Label>
+                  <Label htmlFor="reset-email">Correo Electrónico</Label>
                   <Input
-                    id="email"
+                    id="reset-email"
                     type="email"
                     placeholder="admin@ejemplo.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Contraseña</Label>
-                    <Button 
-                      variant="link" 
-                      className="p-0 h-auto" 
-                      type="button"
-                      onClick={() => setMostrarFormularioReset(true)}
-                    >
-                      ¿Olvidaste tu contraseña?
-                    </Button>
-                  </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
                     required
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+                  {loading ? "Enviando correo..." : "Enviar enlace de restablecimiento"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={() => setShowResetForm(false)}
+                  disabled={loading}
+                >
+                  Cancelar
                 </Button>
               </form>
-            </CardContent>
-            <CardFooter className="flex justify-center">
-              <p className="text-sm text-muted-foreground">Panel de administración - solo personal autorizado</p>
-            </CardFooter>
-          </>
-        )}
+            )
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Correo Electrónico</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@ejemplo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto" 
+                    onClick={() => setShowResetForm(true)}
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </Button>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+              </Button>
+            </form>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <p className="text-sm text-muted-foreground">Panel de administración exclusivo para personal autorizado</p>
+        </CardFooter>
       </Card>
     </div>
   )
