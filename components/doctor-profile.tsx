@@ -132,10 +132,8 @@ export default function DoctorProfile({ id }: DoctorProfileProps) {
           {doctor.focusedon && doctor.focusedon.length > 0 && (
             <div className="flex items-start gap-2 text-sm">
               <Award className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-              <div>
-                <span className="text-muted-foreground block">Enfocado en:</span>
-                <span>{doctor.focusedon.join(", ")}</span>
-              </div>
+              <span className="text-muted-foreground block">Enfocado en:</span>
+              <span>{doctor.focusedon.join(", ")}</span>
             </div>
           )}
         </CardContent>
