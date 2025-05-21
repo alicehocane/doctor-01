@@ -2,39 +2,37 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { LayoutDashboard, Users, UserPlus, Settings, LogOut } from "lucide-react"
+import { LayoutDashboard, Users, UserPlus, Settings, LogOut, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
+import { useState } from "react"
 
 export default function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { signOut } = useAuth()
+  const [isSigningOut, setIsSigningOut] = useState(false)
 
-  // Updated isActive function to handle nested routes correctly
   const isActive = (path: string) => {
-    if (path === "/admin") {
-      // Dashboard is active only when exactly at /admin
-      return pathname === "/admin"
-    } else if (path === "/admin/doctors") {
-      // Lista de Médicos is active only when exactly at /admin/doctors
-      return pathname === "/admin/doctors"
-    } else if (path === "/admin/doctors/add") {
-      // Agregar Médico is active only when exactly at /admin/doctors/add
-      return pathname === "/admin/doctors/add"
-    } else if (path === "/admin/utilities") {
-      // Utilities is active for itself and any sub-pages
-      return pathname === "/admin/utilities" || pathname?.startsWith("/admin/utilities/")
-    }
+    if (path === "/admin") return pathname === "/admin"
+    if (path === "/admin/doctors") return pathname === "/admin/doctors"
+    if (path === "/admin/doctors/add") return pathname === "/admin/doctors/add"
+    if (path === "/admin/utilities") return pathname === "/admin/utilities" || pathname?.startsWith("/admin/utilities/")
     return false
   }
 
   const handleSignOut = async () => {
+    setIsSigningOut(true)
     try {
       await signOut()
-      router.push("/admin/login")
+      // Clear any session cookies
+      document.cookie = "session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+      // Force a hard refresh to ensure all auth state is cleared
+      window.location.href = "/admin/login"
     } catch (error) {
       console.error("Error signing out:", error)
+    } finally {
+      setIsSigningOut(false)
     }
   }
 
@@ -96,10 +94,24 @@ export default function AdminSidebar() {
         </nav>
       </div>
 
-      <div className="p-4 border-t border-border">
-        <Button variant="ghost" className="w-full justify-start hover:bg-accent/50" onClick={handleSignOut}>
-          <LogOut className="h-5 w-5 mr-2" />
-          <span>Cerrar Sesión</span>
+       <div className="p-4 border-t border-border">
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start hover:bg-accent/50" 
+          onClick={handleSignOut}
+          disabled={isSigningOut}
+        >
+          {isSigningOut ? (
+            <>
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              <span>Cerrando sesión...</span>
+            </>
+          ) : (
+            <>
+              <LogOut className="h-5 w-5 mr-2" />
+              <span>Cerrar Sesión</span>
+            </>
+          )}
         </Button>
       </div>
     </div>
