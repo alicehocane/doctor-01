@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, MapPin, Stethoscope, Activity, AlertCircle, RefreshCw } from "lucide-react"
 import { collection, getDocs, query } from "firebase/firestore"
@@ -10,110 +10,136 @@ import { getTopSearchesWithPercentages } from "@/lib/search-tracker"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 
+// Cache objects outside the component
+let statsCache = {
+  totalDoctors: 0,
+  totalCities: 0,
+  totalSpecialties: 0,
+  totalDiseases: 0,
+}
+let activitiesCache: any[] = []
+let searchesCache: any[] = []
+let lastFetchTime: number | null = null
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes in milliseconds
+
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({
-    totalDoctors: 0,
-    totalCities: 0,
-    totalSpecialties: 0,
-    totalDiseases: 0,
-  })
+  const [stats, setStats] = useState(statsCache)
   const [loading, setLoading] = useState(true)
-  const [activities, setActivities] = useState<any[]>([])
-  const [topSearches, setTopSearches] = useState<any[]>([])
+  const [activities, setActivities] = useState(activitiesCache)
+  const [topSearches, setTopSearches] = useState(searchesCache)
   const [loadingActivities, setLoadingActivities] = useState(true)
   const [loadingSearches, setLoadingSearches] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
+  const fetchStats = useCallback(async (forceRefresh = false) => {
+    if (!forceRefresh && lastFetchTime && Date.now() - lastFetchTime < CACHE_DURATION) {
+      setStats(statsCache)
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    try {
+      if (!db) {
+        throw new Error("Firestore not initialized")
+      }
+
+      const doctorsRef = collection(db, "doctors")
+      const q = query(doctorsRef)
+      const querySnapshot = await getDocs(q)
+
+      const doctors = querySnapshot.docs.map((doc) => doc.data())
+      const allCities = doctors.flatMap((doc) => doc.cities || [])
+      const allSpecialties = doctors.flatMap((doc) => doc.specialties || [])
+      const allDiseases = doctors.flatMap((doc) => doc.diseasesTreated || [])
+
+      const newStats = {
+        totalDoctors: querySnapshot.size,
+        totalCities: new Set(allCities).size,
+        totalSpecialties: new Set(allSpecialties).size,
+        totalDiseases: new Set(allDiseases).size,
+      }
+
+      statsCache = newStats
+      lastFetchTime = Date.now()
+      setStats(newStats)
+    } catch (error: any) {
+      console.error("Error fetching stats:", error)
+      if (!error.message.includes("permission")) {
+        setError(`Error al cargar estadísticas: ${error.message}`)
+      }
+
+      // Set default stats for demo
+      setStats({
+        totalDoctors: 125,
+        totalCities: 32,
+        totalSpecialties: 48,
+        totalDiseases: 215,
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const fetchActivities = useCallback(async (forceRefresh = false) => {
+    if (!forceRefresh && lastFetchTime && Date.now() - lastFetchTime < CACHE_DURATION) {
+      setActivities(activitiesCache)
+      setLoadingActivities(false)
+      return
+    }
+
+    setLoadingActivities(true)
+    try {
+      const recentActivities = await getRecentActivities(4)
+      activitiesCache = recentActivities
+      lastFetchTime = Date.now()
+      setActivities(recentActivities)
+    } catch (error: any) {
+      console.error("Error fetching activities:", error)
+      if (!error.message.includes("permission")) {
+        setError(`Error al cargar actividades: ${error.message}`)
+      }
+    } finally {
+      setLoadingActivities(false)
+    }
+  }, [])
+
+  const fetchSearches = useCallback(async (forceRefresh = false) => {
+    if (!forceRefresh && lastFetchTime && Date.now() - lastFetchTime < CACHE_DURATION) {
+      setTopSearches(searchesCache)
+      setLoadingSearches(false)
+      return
+    }
+
+    setLoadingSearches(true)
+    try {
+      const searches = await getTopSearchesWithPercentages(4)
+      searchesCache = searches
+      lastFetchTime = Date.now()
+      setTopSearches(searches)
+    } catch (error: any) {
+      console.error("Error fetching search stats:", error)
+      if (!error.message.includes("permission")) {
+        setError(`Error al cargar estadísticas de búsqueda: ${error.message}`)
+      }
+    } finally {
+      setLoadingSearches(false)
+    }
+  }, [])
+
+  const refreshAllData = useCallback(() => {
+    setRefreshKey((prev) => prev + 1)
+    fetchStats(true)
+    fetchActivities(true)
+    fetchSearches(true)
+  }, [fetchStats, fetchActivities, fetchSearches])
+
   useEffect(() => {
-    const fetchStats = async () => {
-      setLoading(true)
-      try {
-        if (!db) {
-          throw new Error("Firestore not initialized")
-        }
-
-        const doctorsRef = collection(db, "doctors")
-        const q = query(doctorsRef)
-        const querySnapshot = await getDocs(q)
-
-        // Calculate stats from the fetched doctors
-        const doctors = querySnapshot.docs.map((doc) => doc.data())
-
-        // Get unique cities, specialties, and diseases
-        const allCities = doctors.flatMap((doc) => doc.cities || [])
-        const allSpecialties = doctors.flatMap((doc) => doc.specialties || [])
-        const allDiseases = doctors.flatMap((doc) => doc.diseasesTreated || [])
-
-        const uniqueCities = new Set(allCities)
-        const uniqueSpecialties = new Set(allSpecialties)
-        const uniqueDiseases = new Set(allDiseases)
-
-        setStats({
-          totalDoctors: querySnapshot.size,
-          totalCities: uniqueCities.size,
-          totalSpecialties: uniqueSpecialties.size,
-          totalDiseases: uniqueDiseases.size,
-        })
-      } catch (error: any) {
-        console.error("Error fetching stats:", error)
-        // Don't show error message for permission issues, just use default stats
-        if (!error.message.includes("permission")) {
-          setError(`Error al cargar estadísticas: ${error.message}`)
-        }
-
-        // Set default stats for demo
-        setStats({
-          totalDoctors: 125,
-          totalCities: 32,
-          totalSpecialties: 48,
-          totalDiseases: 215,
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    const fetchActivities = async () => {
-      setLoadingActivities(true)
-      try {
-        console.log("Starting to fetch activities...")
-        const recentActivities = await getRecentActivities(4)
-        console.log("Activities fetched:", recentActivities)
-        setActivities(recentActivities)
-      } catch (error: any) {
-        console.error("Error fetching activities:", error)
-        // Don't show error message for permission issues
-        if (!error.message.includes("permission")) {
-          setError(`Error al cargar actividades: ${error.message}`)
-        }
-      } finally {
-        setLoadingActivities(false)
-      }
-    }
-
-    const fetchSearches = async () => {
-      setLoadingSearches(true)
-      try {
-        console.log("Starting to fetch search stats...")
-        const searches = await getTopSearchesWithPercentages(4)
-        console.log("Search stats fetched:", searches)
-        setTopSearches(searches)
-      } catch (error: any) {
-        console.error("Error fetching search stats:", error)
-        // Don't show error message for permission issues
-        if (!error.message.includes("permission")) {
-          setError(`Error al cargar estadísticas de búsqueda: ${error.message}`)
-        }
-      } finally {
-        setLoadingSearches(false)
-      }
-    }
-
     fetchStats()
     fetchActivities()
     fetchSearches()
-  }, [refreshKey])
+  }, [fetchStats, fetchActivities, fetchSearches, refreshKey])
 
   // Function to format relative time
   const formatRelativeTime = (date: Date) => {
@@ -147,11 +173,6 @@ export default function AdminDashboard() {
       default:
         return "bg-yellow-500"
     }
-  }
-
-  // Function to refresh the dashboard
-  const refreshDashboard = () => {
-    setRefreshKey((prev) => prev + 1)
   }
 
   // Function to get type label
@@ -189,10 +210,10 @@ export default function AdminDashboard() {
           <h1 className="text-2xl md:text-3xl font-bold mb-2">Dashboard</h1>
           <p className="text-muted-foreground">Bienvenido al panel de administración del Directorio de Médicos.</p>
         </div>
-        {/* <Button onClick={refreshDashboard} variant="outline" size="sm">
+        <Button onClick={refreshAllData} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4 mr-2" />
           Actualizar
-        </Button> */}
+        </Button>
       </div>
 
       {error && (
