@@ -29,7 +29,7 @@ export default function PrivacyPolicyPage() {
             <CardTitle>Introducción</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p>Última actualización: 7 de mayo de 2025</p>
+            <p>Última actualización: 22 de mayo de 2025</p>
             <p>
               En Busca Doctor México, respetamos su privacidad y nos comprometemos a proteger sus datos personales.
               Esta política de privacidad le informará sobre cómo cuidamos sus datos personales cuando visita nuestro
@@ -147,12 +147,12 @@ export default function PrivacyPolicyPage() {
             </ul>
             <p>
               Si desea ejercer cualquiera de los derechos establecidos anteriormente, contáctenos a través de nuestro
-              formulario de contacto o por correo electrónico a privacidad@directoriodemedicos.mx.
+              formulario de contacto o por correo electrónico a contacto@directoriodemedicos.mx.
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Contacto</CardTitle>
           </CardHeader>
@@ -174,7 +174,7 @@ export default function PrivacyPolicyPage() {
               </p>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
     </MainLayout>
   )
