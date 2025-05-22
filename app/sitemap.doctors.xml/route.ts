@@ -1,5 +1,3 @@
-"use client"
-
 import { db } from "@/lib/firebase"
 import { collection, getDocs } from "firebase/firestore"
 import { NextResponse } from "next/server"
@@ -10,7 +8,17 @@ export async function GET() {
 
     const urls = snapshot.docs.map((doc) => {
       const data = doc.data()
-      const lastMod = data.updatedAt?.toDate?.() || new Date()
+
+      // Fallback to current date if updatedAt is missing or not valid
+      let lastMod = new Date()
+      try {
+        if (data.updatedAt?.toDate) {
+          lastMod = data.updatedAt.toDate()
+        }
+      } catch (e) {
+        console.warn(`Invalid updatedAt for doc ${doc.id}`)
+      }
+
       return `
 <url>
   <loc>https://doctor-01.vercel.app/doctor/${doc.id}</loc>
@@ -30,8 +38,8 @@ ${urls.join("")}
         "Content-Type": "application/xml",
       },
     })
-  } catch (error) {
-    console.error("Failed to generate doctors sitemap:", error)
+  } catch (error: any) {
+    console.error("❌ Error generating doctors sitemap:", error)
     return new NextResponse("Error generating sitemap", { status: 500 })
   }
 }
