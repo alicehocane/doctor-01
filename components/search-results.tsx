@@ -32,7 +32,8 @@ let doctorsCache: {
     timestamp: number
   }
 } = {}
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes in milliseconds
+const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000 // 1 week in milliseconds
+
 
 export default function SearchResults({ tipo, valor }: SearchResultsProps) {
   const router = useRouter()
