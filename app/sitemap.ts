@@ -43,26 +43,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
 
   try {
-    if (!db) throw new Error("Firestore not initialized")
+    const doctorsRef = collection(db, "doctors");
+    const doctorsSnapshot = await getDocs(doctorsRef);
 
-    console.log("Attempting to fetch doctors...") // Debug log
-    const doctorsRef = collection(db, "doctors")
-    const doctorsSnapshot = await getDocs(doctorsRef)
-    console.log(`Found ${doctorsSnapshot.size} doctors`) // Debug log
+    const doctorUrls = doctorsSnapshot.docs.map((doc) => ({
+      url: `https://yourdomain.com/doctor/${doc.id}`,
+      lastModified: doc.data().updatedAt?.toDate?.() || new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
 
-    const doctorUrls = doctorsSnapshot.docs.map((doc) => {
-      const doctor = doc.data()
-      return {
-        url: `https://yourdomain.com/doctor/${doc.id}`,
-        lastModified: doctor.updatedAt?.toDate?.() ?? new Date(),
-        changeFrequency: "weekly" as const,
-        priority: 0.7,
-      }
-    })
-
-    return [...baseUrls, ...doctorUrls]
+    return [...baseUrls, ...doctorUrls];
   } catch (error) {
-    console.error("Sitemap generation failed:", error)
-    return baseUrls // Fallback
+    console.error("Sitemap error:", error);
+    return baseUrls; // Fallback
   }
 }

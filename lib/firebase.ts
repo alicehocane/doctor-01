@@ -1,10 +1,7 @@
-"use client"
+import { initializeApp, getApps } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
-import { initializeApp, getApps } from "firebase/app"
-import { getAuth } from "firebase/auth"
-import { getFirestore } from "firebase/firestore"
-
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -12,28 +9,25 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-}
+};
 
 // Initialize Firebase
-let app
-let auth
-let db
+let app;
+let auth;
+let db;
 
-try {
-  // Check if Firebase is already initialized
-  if (typeof window !== "undefined") {
-    if (!getApps().length) {
-      app = initializeApp(firebaseConfig)
-    } else {
-      app = getApps()[0]
-    }
-
-    auth = getAuth(app)
-    db = getFirestore(app)
-  }
-} catch (error) {
-  console.error("Firebase initialization error:", error)
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApps()[0];
 }
 
-export { app, auth, db }
+// Auth is client-side only (optional)
+if (typeof window !== "undefined") {
+  auth = getAuth(app);
+}
+
+// Firestore works on both server and client
+db = getFirestore(app);
+
+export { app, auth, db };
