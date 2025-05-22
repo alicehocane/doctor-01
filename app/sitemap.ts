@@ -44,23 +44,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
 
   // Fetch all doctors to add their URLs to the sitemap
-  try {
-    const doctorsSnapshot = await getDocs(collection(db, "doctors"))
+  // try {
+  //   const doctorsSnapshot = await getDocs(collection(db, "doctors"))
 
-    const doctorUrls = doctorsSnapshot.docs.map((doc) => {
-      const doctor = doc.data()
-      return {
-        url: `https://yourdomain.com/doctor/${doc.id}`,
-        lastModified: doctor.updatedAt ? new Date(doctor.updatedAt.toDate()) : new Date(),
-        changeFrequency: "weekly" as const,
-        priority: 0.7,
-      }
-    })
+  //   const doctorUrls = doctorsSnapshot.docs.map((doc) => {
+  //     const doctor = doc.data()
+  //     return {
+  //       url: `https://yourdomain.com/doctor/${doc.id}`,
+  //       lastModified: doctor.updatedAt ? new Date(doctor.updatedAt.toDate()) : new Date(),
+  //       changeFrequency: "weekly" as const,
+  //       priority: 0.7,
+  //     }
+  //   })
 
-    return [...baseUrls, ...doctorUrls]
-  } catch (error) {
-    console.error("Error generating sitemap:", error)
-    // Return just the base URLs if there's an error fetching doctors
-    return baseUrls
-  }
+  //   return [...baseUrls, ...doctorUrls]
+  // } catch (error) {
+  //   console.error("Error generating sitemap:", error)
+  //   // Return just the base URLs if there's an error fetching doctors
+  //   return baseUrls
+  // }
 }
