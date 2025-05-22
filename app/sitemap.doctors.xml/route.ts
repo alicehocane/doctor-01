@@ -11,7 +11,7 @@ export async function GET() {
       const lastMod = data.updatedAt?.toDate?.() || new Date()
       return `
 <url>
-  <loc>https://yourdomain.com/doctor/${doc.id}</loc>
+  <loc>https://doctor-01.vercel.app/doctor/${doc.id}</loc>
   <lastmod>${lastMod.toISOString()}</lastmod>
   <changefreq>weekly</changefreq>
   <priority>0.7</priority>
