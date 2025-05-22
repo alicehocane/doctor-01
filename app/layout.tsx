@@ -8,10 +8,9 @@ import { AuthProvider } from "@/contexts/auth-context"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Directorio de Médicos | Encuentra médicos de confianza en México",
+  title: "Busca Doctor México | Encuentra médicos de confianza en México",
   description: "Encuentra médicos de confianza por ciudad, especialidad o padecimientos atendidos en México.",
   keywords: "médicos, doctores, especialistas, México, directorio médico",
-    generator: 'v0.dev'
 }
 
 export default function RootLayout({

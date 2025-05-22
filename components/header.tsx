@@ -27,7 +27,7 @@ export default function Header() {
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link href="/" className="text-xl md:text-2xl font-bold text-primary">
-          Directorio de Médicos
+          Busca Doctor México
         </Link>
 
         {/* Desktop Navigation */}

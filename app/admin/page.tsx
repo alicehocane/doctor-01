@@ -208,7 +208,7 @@ export default function AdminDashboard() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-muted-foreground">Bienvenido al panel de administración del Directorio de Médicos.</p>
+          <p className="text-muted-foreground">Bienvenido al panel de administración del Busca Doctor México.</p>
         </div>
         <Button onClick={refreshAllData} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4 mr-2" />

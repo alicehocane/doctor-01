@@ -7,8 +7,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import MainLayout from "@/components/main-layout"
 
 export const metadata: Metadata = {
-  title: "Contacto | Directorio de Médicos",
-  description: "Contáctanos para obtener más información sobre el Directorio de Médicos.",
+  title: "Contacto | Busca Doctor México",
+  description: "Contáctanos para obtener más información sobre el Busca Doctor México.",
 }
 
 export default function ContactPage() {
@@ -63,16 +63,6 @@ export default function ContactPage() {
                   Puedes intentar buscar con diferentes filtros o revisar la sección de “Especialidades”, “Ciudades” o “Padecimientos Atendidos” destacados en la página de inicio.
                 </AccordionContent>
               </AccordionItem>
-              <AccordionItem value="item-6">
-                <AccordionTrigger>¿Cómo reporto un problema con el sitio web?</AccordionTrigger>
-                <AccordionContent>
-                  Si encuentras algún problema técnico con el sitio web, puedes enviarnos un correo electrónico a
-                  <a href="mailto:soporte@directoriodemedicos.mx" className="text-primary hover:underline ml-1">
-                    soporte@directoriodemedicos.mx 
-                  </a>
-                   , o llamar a nuestro equipo de soporte al número que aparece en la sección de información de contacto.
-                </AccordionContent>
-              </AccordionItem>
             </Accordion>
           </CardContent>
         </Card>
@@ -92,32 +82,32 @@ export default function ContactPage() {
                 </p>
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <h3 className="font-medium">Teléfono</h3>
                 <p className="text-muted-foreground">
                   <a href="tel:+525512345678" className="text-primary hover:underline">
                     (55) 1234-5678
                   </a>
                 </p>
-              </div>
+              </div> */}
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <h3 className="font-medium">Horario de Atención</h3>
                 <p className="text-muted-foreground">
                   Lunes a Viernes: 9:00 AM - 6:00 PM
                   <br />
                   Sábado: 9:00 AM - 2:00 PM
                 </p>
-              </div>
+              </div> */}
 
               <div className="space-y-2">
                 <h3 className="font-medium">Dirección</h3>
                 <p className="text-muted-foreground">
-                  Av. Insurgentes Sur 1234
+                  Av Paseo Royal Country #4596
                   <br />
-                  Col. Del Valle, CP 03100
+                  44610, Colonia Puerta de Hierro
                   <br />
-                  Ciudad de México, México
+                  Zapopan, Jalisco
                 </p>
               </div>
             </div>

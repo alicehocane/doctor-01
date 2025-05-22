@@ -6,8 +6,8 @@ import { ChevronLeft } from "lucide-react"
 import MainLayout from "@/components/main-layout"
 
 export const metadata: Metadata = {
-  title: "Acerca de | Directorio de Médicos",
-  description: "Información sobre el Directorio de Médicos, nuestra misión y desarrollo.",
+  title: "Acerca de | Busca Doctor México",
+  description: "Información sobre el Busca Doctor México, nuestra misión y desarrollo.",
 }
 
 export default function AboutPage() {
@@ -21,7 +21,7 @@ export default function AboutPage() {
       </Button>
 
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl md:text-4xl font-bold text-primary mb-6">Acerca del Directorio de Médicos</h1>
+        <h1 className="text-3xl md:text-4xl font-bold text-primary mb-6">Acerca del Busca Doctor México</h1>
 
         <Card className="mb-8">
           <CardHeader>
@@ -30,7 +30,7 @@ export default function AboutPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
-              El Directorio de Médicos nació con la misión de facilitar el acceso a la atención médica de calidad en
+              El Busca Doctor México nació con la misión de facilitar el acceso a la atención médica de calidad en
               México, conectando a pacientes con médicos especializados de manera rápida y eficiente.
             </p>
             <p>
@@ -84,22 +84,22 @@ export default function AboutPage() {
             <div className="space-y-2">
               <p>
                 <span className="font-medium">Correo electrónico:</span>{" "}
-                <a href="mailto:contacto@directoriodemedicos.mx" className="text-primary hover:underline">
+                <a href="mailto:Contacto@buscadoctormexico.com" className="text-primary hover:underline">
                   contacto@directoriodemedicos.mx
                 </a>
               </p>
-              <p>
+              {/* <p>
                 <span className="font-medium">Teléfono:</span>{" "}
                 <a href="tel:+525512345678" className="text-primary hover:underline">
                   (55) 1234-5678
                 </a>
-              </p>
+              </p> */}
             </div>
-            <div className="pt-4">
+            {/* <div className="pt-4">
               <Button asChild>
                 <Link href="/contact">Formulario de Contacto</Link>
               </Button>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
       </div>

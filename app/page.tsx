@@ -9,7 +9,7 @@ import FeaturedSections from "@/components/featured-sections"
 import SearchBar from "@/components/search-bar"
 
 export const metadata: Metadata = {
-  title: "Directorio de Médicos | Encuentra médicos de confianza en México",
+  title: "Busca Doctor México | Encuentra médicos de confianza en México",
   description: "Encuentra médicos de confianza por ciudad, especialidad o padecimientos atendidos en México.",
 }
 

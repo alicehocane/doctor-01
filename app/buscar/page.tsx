@@ -5,7 +5,7 @@ import SearchResultsSkeleton from "@/components/search-results-skeleton"
 import MainLayout from "@/components/main-layout"
 
 export const metadata: Metadata = {
-  title: "Buscar Médicos | Directorio de Médicos",
+  title: "Buscar Médicos | Busca Doctor México",
   description: "Resultados de búsqueda de médicos por ciudad, especialidad o padecimientos atendidos.",
 }
 

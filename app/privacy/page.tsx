@@ -6,9 +6,9 @@ import { ChevronLeft } from "lucide-react"
 import MainLayout from "@/components/main-layout"
 
 export const metadata: Metadata = {
-  title: "Política de Privacidad | Directorio de Médicos",
+  title: "Política de Privacidad | Busca Doctor México",
   description:
-    "Política de privacidad del Directorio de Médicos, cumpliendo con las leyes de protección de datos de México.",
+    "Política de privacidad del Busca Doctor México, cumpliendo con las leyes de protección de datos de México.",
 }
 
 export default function PrivacyPolicyPage() {
@@ -31,7 +31,7 @@ export default function PrivacyPolicyPage() {
           <CardContent className="space-y-4">
             <p>Última actualización: 7 de mayo de 2025</p>
             <p>
-              En Directorio de Médicos, respetamos su privacidad y nos comprometemos a proteger sus datos personales.
+              En Busca Doctor México, respetamos su privacidad y nos comprometemos a proteger sus datos personales.
               Esta política de privacidad le informará sobre cómo cuidamos sus datos personales cuando visita nuestro
               sitio web y le informará sobre sus derechos de privacidad y cómo la ley lo protege.
             </p>

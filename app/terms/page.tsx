@@ -6,8 +6,8 @@ import { ChevronLeft } from "lucide-react"
 import MainLayout from "@/components/main-layout"
 
 export const metadata: Metadata = {
-  title: "Términos de Servicio | Directorio de Médicos",
-  description: "Términos y condiciones de uso del Directorio de Médicos.",
+  title: "Términos de Servicio | Busca Doctor México",
+  description: "Términos y condiciones de uso del Busca Doctor México.",
 }
 
 export default function TermsOfServicePage() {
@@ -35,7 +35,7 @@ export default function TermsOfServicePage() {
             </p>
             <p>
               Al acceder a este sitio web, asumimos que acepta estos términos y condiciones en su totalidad. No continúe
-              usando el sitio web del Directorio de Médicos si no acepta todos los términos y condiciones establecidos
+              usando el sitio web del Busca Doctor México si no acepta todos los términos y condiciones establecidos
               en esta página.
             </p>
           </CardContent>
@@ -47,8 +47,8 @@ export default function TermsOfServicePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
-              A menos que se indique lo contrario, el Directorio de Médicos y/o sus licenciantes poseen los derechos de
-              propiedad intelectual de todo el material en el Directorio de Médicos. Todos los derechos de propiedad
+              A menos que se indique lo contrario, el Busca Doctor México y/o sus licenciantes poseen los derechos de
+              propiedad intelectual de todo el material en el Busca Doctor México. Todos los derechos de propiedad
               intelectual están reservados.
             </p>
             <p>
@@ -57,10 +57,10 @@ export default function TermsOfServicePage() {
             </p>
             <p>No debe:</p>
             <ul className="list-disc pl-6 space-y-2">
-              <li>Republicar material del Directorio de Médicos</li>
-              <li>Vender, alquilar o sublicenciar material del Directorio de Médicos</li>
-              <li>Reproducir, duplicar o copiar material del Directorio de Médicos</li>
-              <li>Redistribuir contenido del Directorio de Médicos</li>
+              <li>Republicar material del Busca Doctor México</li>
+              <li>Vender, alquilar o sublicenciar material del Busca Doctor México</li>
+              <li>Reproducir, duplicar o copiar material del Busca Doctor México</li>
+              <li>Redistribuir contenido del Busca Doctor México</li>
             </ul>
           </CardContent>
         </Card>
@@ -71,10 +71,10 @@ export default function TermsOfServicePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
-              En ningún caso, el Directorio de Médicos o sus proveedores serán responsables de ningún daño (incluidos,
+              En ningún caso, el Busca Doctor México o sus proveedores serán responsables de ningún daño (incluidos,
               sin limitación, daños por pérdida de datos o beneficios, o debido a la interrupción del negocio) que
-              surjan del uso o la incapacidad de usar los materiales en el sitio web del Directorio de Médicos, incluso
-              si el Directorio de Médicos o un representante autorizado del Directorio de Médicos ha sido notificado
+              surjan del uso o la incapacidad de usar los materiales en el sitio web del Busca Doctor México, incluso
+              si el Busca Doctor México o un representante autorizado del Busca Doctor México ha sido notificado
               oralmente o por escrito de la posibilidad de tales daños.
             </p>
             <p>
@@ -90,12 +90,12 @@ export default function TermsOfServicePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
-              Los materiales que aparecen en el sitio web del Directorio de Médicos podrían incluir errores técnicos,
-              tipográficos o fotográficos. El Directorio de Médicos no garantiza que cualquiera de los materiales en su
-              sitio web sean precisos, completos o actuales. El Directorio de Médicos puede realizar cambios en los
+              Los materiales que aparecen en el sitio web del Busca Doctor México podrían incluir errores técnicos,
+              tipográficos o fotográficos. El Busca Doctor México no garantiza que cualquiera de los materiales en su
+              sitio web sean precisos, completos o actuales. El Busca Doctor México puede realizar cambios en los
               materiales contenidos en su sitio web en cualquier momento sin previo aviso.
             </p>
-            <p>El Directorio de Médicos no se compromete a actualizar los materiales.</p>
+            <p>El Busca Doctor México no se compromete a actualizar los materiales.</p>
           </CardContent>
         </Card>
 
@@ -105,9 +105,9 @@ export default function TermsOfServicePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
-              El Directorio de Médicos no ha revisado todos los sitios vinculados a su sitio web y no es responsable del
+              El Busca Doctor México no ha revisado todos los sitios vinculados a su sitio web y no es responsable del
               contenido de ningún sitio vinculado. La inclusión de cualquier enlace no implica respaldo por parte del
-              Directorio de Médicos del sitio. El uso de cualquier sitio web vinculado es bajo el propio riesgo del
+              Busca Doctor México del sitio. El uso de cualquier sitio web vinculado es bajo el propio riesgo del
               usuario.
             </p>
           </CardContent>
@@ -119,7 +119,7 @@ export default function TermsOfServicePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
-              El Directorio de Médicos puede revisar estos términos de servicio para su sitio web en cualquier momento
+              El Busca Doctor México puede revisar estos términos de servicio para su sitio web en cualquier momento
               sin previo aviso. Al usar este sitio web, usted acepta estar sujeto a la versión actual de estos términos
               de servicio.
             </p>
