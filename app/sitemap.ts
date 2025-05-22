@@ -43,13 +43,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
 
   try {
-    // Verify db is initialized
-    if (!db) {
-      throw new Error("Firestore database not initialized")
-    }
+    if (!db) throw new Error("Firestore not initialized")
 
+    console.log("Attempting to fetch doctors...") // Debug log
     const doctorsRef = collection(db, "doctors")
     const doctorsSnapshot = await getDocs(doctorsRef)
+    console.log(`Found ${doctorsSnapshot.size} doctors`) // Debug log
 
     const doctorUrls = doctorsSnapshot.docs.map((doc) => {
       const doctor = doc.data()
@@ -63,8 +62,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     return [...baseUrls, ...doctorUrls]
   } catch (error) {
-    console.error("Error generating sitemap:", error)
-    // Return just the base URLs if there's an error
-    return baseUrls
+    console.error("Sitemap generation failed:", error)
+    return baseUrls // Fallback
   }
 }
