@@ -1,9 +1,8 @@
-// pages/api/sitemap.doctors.xml.ts
-import { NextApiRequest, NextApiResponse } from "next"
 import { db } from "@/lib/firebase"
 import { collection, getDocs } from "firebase/firestore"
+import { NextResponse } from "next/server"
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export async function GET() {
   try {
     const snapshot = await getDocs(collection(db, "doctors"))
 
@@ -24,11 +23,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 ${urls.join("")}
 </urlset>`
 
-    res.setHeader("Content-Type", "application/xml")
-    res.write(xml)
-    res.end()
+    return new NextResponse(xml, {
+      headers: {
+        "Content-Type": "application/xml",
+      },
+    })
   } catch (error) {
-    console.error("Error generating doctors sitemap:", error)
-    res.status(500).end()
+    console.error("Failed to generate doctors sitemap:", error)
+    return new NextResponse("Error generating sitemap", { status: 500 })
   }
 }

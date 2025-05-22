@@ -1,7 +1,6 @@
-// pages/api/sitemap.xml.ts
-import { NextApiRequest, NextApiResponse } from "next"
+import { NextResponse } from "next/server"
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
@@ -12,7 +11,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   </sitemap>
 </sitemapindex>`
 
-  res.setHeader("Content-Type", "application/xml")
-  res.write(xml)
-  res.end()
+  return new NextResponse(xml, {
+    headers: {
+      "Content-Type": "application/xml",
+    },
+  })
 }
