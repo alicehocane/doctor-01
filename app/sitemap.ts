@@ -3,55 +3,59 @@ import { db } from "@/lib/firebase"
 import { collection, getDocs } from "firebase/firestore"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Base URLs that are static
   const baseUrls = [
     {
       url: "https://yourdomain.com",
       lastModified: new Date(),
-      changeFrequency: "daily",
+      changeFrequency: "daily" as const,
       priority: 1,
     },
     {
       url: "https://yourdomain.com/about",
       lastModified: new Date(),
-      changeFrequency: "monthly",
+      changeFrequency: "monthly" as const,
       priority: 0.8,
     },
     {
       url: "https://yourdomain.com/contact",
       lastModified: new Date(),
-      changeFrequency: "monthly",
+      changeFrequency: "monthly" as const,
       priority: 0.8,
     },
     {
       url: "https://yourdomain.com/buscar",
       lastModified: new Date(),
-      changeFrequency: "weekly",
+      changeFrequency: "weekly" as const,
       priority: 0.9,
     },
     {
       url: "https://yourdomain.com/terms",
       lastModified: new Date(),
-      changeFrequency: "yearly",
+      changeFrequency: "yearly" as const,
       priority: 0.5,
     },
     {
       url: "https://yourdomain.com/privacy",
       lastModified: new Date(),
-      changeFrequency: "yearly",
+      changeFrequency: "yearly" as const,
       priority: 0.5,
     },
   ]
 
-  // Fetch all doctors to add their URLs to the sitemap
   try {
-    const doctorsSnapshot = await getDocs(collection(db, "doctors"))
+    // Verify db is initialized
+    if (!db) {
+      throw new Error("Firestore database not initialized")
+    }
+
+    const doctorsRef = collection(db, "doctors")
+    const doctorsSnapshot = await getDocs(doctorsRef)
 
     const doctorUrls = doctorsSnapshot.docs.map((doc) => {
       const doctor = doc.data()
       return {
         url: `https://yourdomain.com/doctor/${doc.id}`,
-        lastModified: doctor.updatedAt ? new Date(doctor.updatedAt.toDate()) : new Date(),
+        lastModified: doctor.updatedAt?.toDate?.() ?? new Date(),
         changeFrequency: "weekly" as const,
         priority: 0.7,
       }
@@ -60,7 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return [...baseUrls, ...doctorUrls]
   } catch (error) {
     console.error("Error generating sitemap:", error)
-    // Return just the base URLs if there's an error fetching doctors
+    // Return just the base URLs if there's an error
     return baseUrls
   }
 }
