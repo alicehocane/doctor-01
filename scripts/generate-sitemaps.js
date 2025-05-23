@@ -1,5 +1,4 @@
 // scripts/generate-sitemaps.js
-#!/usr/bin/env node
 
 /**
  * Optimized sitemap generator:
