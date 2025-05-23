@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { firestore } from '../../lib/firebase-admin'
+import { firestore } from '../../lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 604800; // 7 days
