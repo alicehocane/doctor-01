@@ -1,7 +1,7 @@
 // lib/firebase-server.ts
 
-import { initializeApp, cert, getApps } from "firebase-admin/app"
-import { getFirestore } from "firebase-admin/firestore"
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 
 const firebaseAdminConfig = {
   credential: cert({
@@ -9,10 +9,12 @@ const firebaseAdminConfig = {
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
   }),
-}
+};
 
-const app = !getApps().length ? initializeApp(firebaseAdminConfig) : getApps()[0]
+const adminApp = !getApps().length
+  ? initializeApp(firebaseAdminConfig)
+  : getApps()[0];
 
-const db = getFirestore(app)
+const db = getFirestore(adminApp);
 
-export { db }
+export { adminApp, db };
