@@ -1,4 +1,3 @@
- <-- Paginated doctor sitemap pages
 import { MetadataRoute } from "next"
 import { adminDb } from "@/lib/firebaseAdmin"
 
