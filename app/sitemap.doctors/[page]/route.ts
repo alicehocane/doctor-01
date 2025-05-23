@@ -1,43 +1,35 @@
 // File: app/sitemap.doctors/[page]/route.ts
-import { NextResponse } from 'next/server'
-import { getFirestore } from 'firebase-admin/firestore'
-import { adminApp } from '@/lib/firebase-server'
+import { db } from "@/lib/firebase-server"
+import { collection, getDocs, query, orderBy, limit, startAt } from "firebase/firestore"
+import { MetadataRoute } from "next"
+import { NextRequest } from "next/server"
 
-export async function GET(req: Request, { params }: { params: { page: string } }) {
-  const db = getFirestore(adminApp)
-  const page = parseInt(params.page)
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { page: string } }
+): Promise<MetadataRoute.Sitemap> {
   const pageSize = 500
+  const page = parseInt(params.page)
 
   if (isNaN(page) || page < 1) {
-    return new NextResponse('Invalid page number', { status: 400 })
+    return []
   }
 
-  try {
-    const doctorsQuery = await db
-      .collection('doctors')
-      .orderBy('name') // adjust if needed
-      .offset((page - 1) * pageSize)
-      .limit(pageSize)
-      .get()
+  const allDoctorsSnapshot = await getDocs(query(collection(db, "doctors"), orderBy("createdAt")))
+  const startIndex = (page - 1) * pageSize
+  const endIndex = page * pageSize
 
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
-    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-      ${doctorsQuery.docs.map(doc => {
-        return `
-        <url>
-          <loc>https://doctor-01.vercel.app/doctor/${doc.id}</loc>
-          <lastmod>${new Date().toISOString()}</lastmod>
-        </url>`
-      }).join('')}
-    </urlset>`
+  const pageDocs = allDoctorsSnapshot.docs.slice(startIndex, endIndex)
 
-    return new NextResponse(xml, {
-      headers: {
-        'Content-Type': 'application/xml',
-      },
-    })
-  } catch (error) {
-    console.error('Error fetching paginated sitemap:', error)
-    return new NextResponse('Internal Server Error', { status: 500 })
-  }
+  const urls = pageDocs.map((doc) => {
+    const doctor = doc.data()
+    return {
+      url: `https://yourdomain.com/doctor/${doc.id}`,
+      lastModified: doctor.updatedAt ? new Date(doctor.updatedAt.toDate()) : new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }
+  })
+
+  return urls
 }
