@@ -1,5 +1,5 @@
 // app/sitemap.doctors/[page]/route.ts
-'use server'
+'use server';
 
 import { NextResponse } from 'next/server';
 import { firestore } from '@/lib/firebase-admin';
