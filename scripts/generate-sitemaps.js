@@ -1,37 +1,56 @@
 // scripts/generate-sitemaps.js
-// CommonJS script to generate sitemaps in /public
+// Optimized static sitemap generator for Vercel deployments
+
 const fs = require('fs');
 const path = require('path');
 const admin = require('firebase-admin');
 
 // ---------- CONFIG ----------
 const PAGE_SIZE = 400;
-const SITE_URL = process.env.SITE_URL || 'https://doctor-01.vercel.app';
-const publicDir = path.resolve(process.cwd(), 'public');
+const SITE_URL = process.env.SITE_URL || 'https://yourdomain.com';
+const publicDir = path.join(process.cwd(), 'public');
 const doctorsDir = path.join(publicDir, 'sitemap.doctors');
 const metaFile = path.join(publicDir, 'sitemap.doctors.meta.json');
-const isCI = !!process.env.CI && !process.env.VERCEL;
 
-// Static pages list
+// Static pages to include
 const staticPages = [
-  { path: '/',        freq: 'daily',   pri: '1.0' },
-  { path: '/about',   freq: 'monthly', pri: '0.7' },
+  { path: '/',      freq: 'daily',   pri: '1.0' },
+  { path: '/about', freq: 'monthly', pri: '0.7' },
   { path: '/contact', freq: 'monthly', pri: '0.7' },
-  // add more static pages here
 ];
 
 // ---------- INIT FIREBASE ----------
 if (!admin.apps.length) {
-  const serviceAccount = {
+  admin.initializeApp({
+    credential: admin.credential.cert({
     project_id:  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    client_email: process.env.FIREBASE_CLIENT_EMAIL,
-    private_key:  process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-  };
-  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+     client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      private_key:  process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    }),
+  });
 }
 const db = admin.firestore();
 
-// ---------- UTILITY FUNCTIONS ----------
+// ---------- FIRESTORE FETCHERS ----------
+async function fetchAllDocs() {
+  const snap = await db.collection('doctors').orderBy('slug').get();
+  return snap.docs.map(doc => ({
+    slug:    doc.data().slug,
+    lastmod: doc.updateTime.toDate().toISOString(),
+  }));
+}
+
+async function fetchNewDocs(since) {
+  let q = db.collection('doctors').orderBy('createdAt');
+  if (since) q = q.where('createdAt', '>', new Date(since));
+  const snap = await q.get();
+  return snap.docs.map(doc => ({
+    slug:    doc.data().slug,
+    lastmod: doc.updateTime.toDate().toISOString(),
+  }));
+}
+
+// ---------- XML WRITERS ----------
 function writeStaticSitemap() {
   const lines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
@@ -51,7 +70,7 @@ function writeStaticSitemap() {
   fs.writeFileSync(path.join(publicDir, 'sitemap.static.xml'), lines.join('\n'));
 }
 
-function writeDoctorPage(pageIndex, docs) {
+function writeDoctorPage(idx, docs) {
   const lines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
@@ -65,15 +84,15 @@ function writeDoctorPage(pageIndex, docs) {
     );
   });
   lines.push('</urlset>');
-  fs.writeFileSync(path.join(doctorsDir, `${pageIndex}.xml`), lines.join('\n'));
+  fs.writeFileSync(path.join(doctorsDir, `${idx}.xml`), lines.join('\n'));
 }
 
-function writeDoctorsIndex(pages) {
+function writeDoctorsIndex(count) {
   const lines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
   ];
-  for (let i = 1; i <= pages; i++) {
+  for (let i = 1; i <= count; i++) {
     lines.push(
       `  <sitemap>`,
       `    <loc>${SITE_URL}/sitemap.doctors/${i}.xml</loc>`,
@@ -99,71 +118,53 @@ function writeMainSitemap() {
   fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), lines.join('\n'));
 }
 
-// ---------- FETCH DOCTORS ----------
-async function fetchAllDocs() {
-  const snap = await db.collection('doctors').orderBy('slug').get();
-  return snap.docs.map(d => ({
-    slug: d.data().slug,
-    lastmod: d.updateTime.toDate().toISOString(),
-  }));
+// ---------- VERCEL GUARD ----------
+if (process.env.VERCEL) {
+  console.log('⚠️ Vercel build: only generating static & master sitemaps.');
+  // Ensure directories exist
+  fs.mkdirSync(doctorsDir, { recursive: true });
+  writeStaticSitemap();
+  writeMainSitemap();
+  process.exit(0);
 }
 
-async function fetchNewDocs(since) {
-  let q = db.collection('doctors').orderBy('createdAt');
-  if (since) q = q.where('createdAt', '>', new Date(since));
-  const snap = await q.get();
-  return snap.docs.map(d => ({
-    slug: d.data().slug,
-    lastmod: d.updateTime.toDate().toISOString(),
-  }));
-}
-
-// ---------- MAIN ----------
+// ---------- FULL GENERATION (LOCAL or CI with meta) ----------
 (async () => {
-  // Always generate static sitemap
+  // Prepare output dirs
+  fs.rmSync(doctorsDir, { recursive: true, force: true });
+  fs.mkdirSync(doctorsDir, { recursive: true });
+
+  // Static
   writeStaticSitemap();
 
-  // Doctors sitemap logic
-  let allDocs = [];
+  // Load meta
   let meta = {};
   if (fs.existsSync(metaFile)) {
-    try { meta = JSON.parse(fs.readFileSync(metaFile, 'utf-8')); } catch {};
-    allDocs = JSON.parse(
-      fs.readFileSync(path.join(publicDir, 'sitemap.doctors.meta.json'), 'utf-8')
-    ).docs || [];
+    meta = JSON.parse(fs.readFileSync(metaFile, 'utf-8')) || {};
   }
 
-  // If not CI or meta exists, fetch docs
-  if (!isCI || fs.existsSync(metaFile)) {
-    const since = meta.lastTimestamp;
-    const newDocs = since ? await fetchNewDocs(since) : await fetchAllDocs();
-    console.log(`🔍 Fetched ${newDocs.length} doctor records.`);
-    allDocs = allDocs.concat(newDocs);
+  // Determine fetch type
+  const isFirst = !Array.isArray(meta.docs);
+  const toFetch = isFirst ? await fetchAllDocs() : await fetchNewDocs(meta.lastTimestamp);
+  console.log(`📦 Fetched ${toFetch.length} ${isFirst ? 'total' : 'new'} doctor records.`);
 
-    // Ensure doctorsDir
-    fs.rmSync(doctorsDir, { recursive: true, force: true });
-    fs.mkdirSync(doctorsDir, { recursive: true });
+  const all = (isFirst ? [] : meta.docs).concat(toFetch);
+  const pages = Math.ceil(all.length / PAGE_SIZE);
 
-    // Chunk and write doctor pages
-    const pages = Math.ceil(allDocs.length / PAGE_SIZE);
-    for (let i = 0; i < pages; i++) {
-      const chunk = allDocs.slice(i * PAGE_SIZE, (i + 1) * PAGE_SIZE);
-      writeDoctorPage(i + 1, chunk);
-    }
-
-    // Write doctors index
-    writeDoctorsIndex(Math.ceil(allDocs.length / PAGE_SIZE));
-
-    // Update meta with docs list and timestamp
-    fs.writeFileSync(
-      metaFile,
-      JSON.stringify({ lastTimestamp: new Date().toISOString(), docs: allDocs }, null, 2)
-    );
-  } else {
-    console.log('⚠️  CI build without meta; skipping doctors sitemap generation.');
+  // Write paginated doctor sitemaps
+  for (let i = 0; i < pages; i++) {
+    writeDoctorPage(i + 1, all.slice(i * PAGE_SIZE, (i + 1) * PAGE_SIZE));
   }
 
-  // Always generate master sitemap index
+  // Indexes
+  writeDoctorsIndex(pages);
   writeMainSitemap();
-  console.log('✅ Sitemaps generated.');
+
+  // Persist meta
+  fs.writeFileSync(
+    metaFile,
+    JSON.stringify({ lastTimestamp: new Date().toISOString(), docs: all }, null, 2)
+  );
+
+  console.log(`✅ Sitemaps generated: ${pages} doctor pages, static, master index.`);
 })();
