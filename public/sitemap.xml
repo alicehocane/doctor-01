@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
-    <loc>https://yourdomain.com/sitemap.static.xml</loc>
+    <loc>https://doctor-01.vercel.app/sitemap.static.xml</loc>
   </sitemap>
   <sitemap>
-    <loc>https://yourdomain.com/sitemap.doctors.xml</loc>
+    <loc>https://doctor-01.vercel.app/sitemap.doctors.xml</loc>
   </sitemap>
 </sitemapindex>
