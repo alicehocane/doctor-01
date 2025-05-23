@@ -1,22 +1,36 @@
-// app/sitemap.doctors/[page]/route.ts  <-- Paginated doctor sitemap pages
-import { MetadataRoute } from "next"
-import { adminDb } from "@/lib/firebaseAdmin"
+// app/sitemap.doctors/[page]/route.ts
+import { NextResponse }  from "next/server";
+import { formatISO }      from "date-fns";
+import { db }             from "@/lib/firebase-server";
 
-export default async function sitemap({ params }: { params: { page: string } }): Promise<MetadataRoute.Sitemap> {
-  const page = parseInt(params.page, 10)
-  const pageSize = 500
-  const offset = (page - 1) * pageSize
+const PAGE_SIZE = 500;
 
-  const snapshot = await adminDb.collection("doctors")
+export async function GET({ params }: { params: { page: string } }) {
+  const page   = Math.max(1, parseInt(params.page, 10));
+  const offset = (page - 1) * PAGE_SIZE;
+  const now    = formatISO(new Date());
+
+  const snap = await db
+    .collection("doctors")
     .orderBy("slug")
     .offset(offset)
-    .limit(pageSize)
-    .get()
+    .limit(PAGE_SIZE)
+    .get();
 
-  const urls = snapshot.docs.map(doc => ({
-    url: `https://yourdomain.com/doctors/${doc.data().slug}`,
-    lastModified: doc.updateTime?.toDate(),
-  }))
+  const body = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  ${snap.docs.map(doc => `
+    <url>
+      <loc>https://yourdomain.com/doctors/${doc.data().slug}</loc>
+      <lastmod>${formatISO(doc.updateTime!.toDate())}</lastmod>
+    </url>`).join("")}
+</urlset>`;
 
-  return urls
+  return new NextResponse(body, {
+    headers: { "Content-Type": "application/xml" },
+  });
+}
+
+export function HEAD() {
+  return GET(arguments[0]);
 }

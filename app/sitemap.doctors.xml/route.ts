@@ -1,17 +1,31 @@
-// app/sitemap.doctors.xml/route.ts  <-- Doctor sitemap index (paginated)
-import { MetadataRoute } from "next"
-import { adminDb } from "@/lib/firebaseAdmin"
+// app/sitemap.doctors.xml/route.ts
+import { NextResponse }  from "next/server";
+import { formatISO }      from "date-fns";
+import { db }             from "@/lib/firebase-server";
 
-export default async function sitemap(): Promise<MetadataRoute.SitemapIndex> {
-  // Count total doctor documents
-  const snapshot = await adminDb.collection("doctors").count().get()
-  const total = snapshot.data().count ?? 0
-  const pageSize = 500
-  const pages = Math.ceil(total / pageSize)
+const PAGE_SIZE = 500;
 
-  // Generate sitemap index entries for each page
-  return Array.from({ length: pages }).map((_, i) => ({
-    url: `https://yourdomain.com/sitemap.doctors/${i + 1}`,
-    lastModified: new Date(),
-  }))
+export async function GET() {
+  // Count documents
+  const snapshot = await db.collection("doctors").count().get();
+  const total    = snapshot.data().count ?? 0;
+  const pages    = Math.ceil(total / PAGE_SIZE);
+  const now      = formatISO(new Date());
+
+  const body = `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  ${Array.from({ length: pages }).map((_, i) => `
+    <sitemap>
+      <loc>https://yourdomain.com/sitemap.doctors/${i + 1}</loc>
+      <lastmod>${now}</lastmod>
+    </sitemap>`).join("")}
+</sitemapindex>`;
+
+  return new NextResponse(body, {
+    headers: { "Content-Type": "application/xml" },
+  });
+}
+
+export function HEAD() {
+  return GET();
 }
