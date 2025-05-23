@@ -1,4 +1,3 @@
-'use server';
 import { NextResponse } from 'next/server';
 
 /**
@@ -34,3 +33,4 @@ ${urlset}
     headers: { 'Content-Type': 'application/xml' },
   });
 }
+

@@ -1,10 +1,13 @@
-'use server';
-export const dynamic    = 'force-dynamic';
+import { NextResponse } from 'next/server';
+import { firestore } from '@/lib/firebase-admin';
+
+export const dynamic = 'force-dynamic';
 export const revalidate = 604800; // 7 days
 
-import { NextResponse } from 'next/server';
-import { firestore }    from '@/lib/firebase-admin';
-
+/**
+ * Dynamic paginated doctor sitemap.
+ * @param params.page Page number of the sitemap.
+ */
 export async function GET(
   _: Request,
   { params }: { params: { page: string } }
@@ -15,39 +18,41 @@ export async function GET(
   const now = new Date().toISOString();
 
   try {
-    let query = firestore
+    const snapshot = await firestore
       .collection('doctors')
       .orderBy('createdAt')
       .offset((pageNum - 1) * pageSize)
-      .limit(pageSize);
+      .limit(pageSize)
+      .get();
 
-    const snapshot = await query.get();
     const urls = snapshot.docs.map(doc => {
       const data = doc.data();
       const lastmod = data.updatedAt
         ? data.updatedAt.toDate().toISOString()
         : now;
 
-      return `  <url>
-    <loc>${baseUrl}/doctor/${doc.id}</loc>
-    <lastmod>${lastmod}</lastmod>
-  </url>`;
-    });
+      return (
+        `  <url>\n` +
+        `    <loc>${baseUrl}/doctor/${doc.id}</loc>\n` +
+        `    <lastmod>${lastmod}</lastmod>\n` +
+        `  </url>`
+      );
+    }).join("\n");
 
-    const urlset = urls.join("\n");
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urlset}
-</urlset>`;
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      urls +
+      `\n</urlset>`;
 
     return new NextResponse(xml, {
       headers: { 'Content-Type': 'application/xml' },
     });
   } catch (err: any) {
     console.error('Error fetching doctors for sitemap:', err);
-    // Fallback to empty sitemap on error
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`;
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`;
 
     return new NextResponse(xml, {
       headers: { 'Content-Type': 'application/xml' },

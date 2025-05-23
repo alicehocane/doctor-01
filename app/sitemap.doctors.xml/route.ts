@@ -1,9 +1,8 @@
-'use server';
 import { NextResponse } from 'next/server';
 import { firestore } from '@/lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 604800; // 7 days in seconds
+export const revalidate = 604800; // 7 days
 
 /**
  * Generates a sitemap index of paginated doctor sitemaps.
@@ -14,12 +13,10 @@ export async function GET() {
   let totalDocs = 0;
 
   try {
-    // Firestore aggregation count (requires Firestore 9.17+)
     const agg = await firestore.collection('doctors').count().get();
     totalDocs = agg.data().count;
   } catch (err: any) {
     console.error('Error counting doctors:', err);
-    // Fallback: assume single page if quota exceeded
     totalDocs = 500;
   }
 
