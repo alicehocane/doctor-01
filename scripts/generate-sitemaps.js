@@ -5,7 +5,7 @@ import admin from 'firebase-admin'
 
 // ---------- CONFIG ----------
 const PAGE_SIZE = 400
-const SITE_URL = process.env.SITE_URL || 'https://yourdomain.com'
+const SITE_URL = process.env.SITE_URL || 'https://doctor-01.vercel.app/'
 const publicDir = path.resolve(process.cwd(), 'public')
 const doctorsDir = path.join(publicDir, 'sitemap.doctors')
 const metaFile = path.join(publicDir, 'sitemap.doctors.meta.json')
@@ -126,10 +126,11 @@ function writeMainSitemap() {
 (async () => {
   // Initial guard: skip if no meta
   if (!fs.existsSync(metaFile)) {
-    console.log('⚠️  No meta file found. Running full generation manually:')
-    console.log('    node scripts/generate-sitemaps.js')
-    // proceed with full generation
-  }
+    console.log('⚠️  No meta file found. Skipping sitemap generation to avoid Firestore calls.');
+    console.log('    Please run this script locally once to seed the initial sitemaps:');
+    console.log('      node scripts/generate-sitemaps.js');
+    return; // *important*: stop here on CI/build environments
+}
 
   // Ensure dirs
   fs.rmSync(doctorsDir, { recursive: true, force: true })
