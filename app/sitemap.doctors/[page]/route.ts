@@ -7,7 +7,7 @@ export const revalidate = 604800; // 7 days
 
 /**
  * Dynamic paginated doctor sitemap.
- * @param params.page Page number of the sitemap.
+ * @param params.page Page number of the sitemaps
  */
 export async function GET(
   _: Request,
