@@ -1,16 +1,11 @@
 // lib/firebaseAdmin.ts
-import { initializeApp, cert, getApps, applicationDefault } from "firebase-admin/app"
+import { initializeApp, applicationDefault, getApps } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
 
-const firebaseAdminConfig = {
-  credential: applicationDefault(),
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-}
-
+// Ensure Admin SDK is initialized once
 if (!getApps().length) {
-  initializeApp(firebaseAdminConfig)
+  initializeApp({ credential: applicationDefault() })
 }
 
-const adminDb = getFirestore()
-
-export { adminDb }
+// Export Firestore under a clear name
+export const adminDb = getFirestore()

@@ -1,18 +1,14 @@
 // lib/firebase-server.ts
-
-import { initializeApp, cert, getApps } from "firebase-admin/app"
+import { initializeApp, cert, getApps, applicationDefault } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
 
-const firebaseAdminConfig = {
-  credential: cert({
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-  }),
-}
+// Initialize or reuse existing Firebase Admin app
+const app = !getApps().length
+  ? initializeApp({ credential: applicationDefault() })
+  : getApps()[0]
 
-const app = !getApps().length ? initializeApp(firebaseAdminConfig) : getApps()[0]
-
+// Firestore client
 const db = getFirestore(app)
 
-export { db }
+// Export both app and db for use elsewhere
+export { app as adminApp, db }
