@@ -6,7 +6,7 @@ const admin = require('firebase-admin');
 
 // ---------- CONFIG ----------
 const PAGE_SIZE = 400;
-const SITE_URL = process.env.SITE_URL || 'https://yourdomain.com';
+const SITE_URL = process.env.SITE_URL || 'https://doctor-01.vercel.app';
 const publicDir = path.resolve(process.cwd(), 'public');
 const doctorsDir = path.join(publicDir, 'sitemap.doctors');
 const metaFile = path.join(publicDir, 'sitemap.doctors.meta.json');
