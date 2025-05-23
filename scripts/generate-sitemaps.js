@@ -10,7 +10,7 @@ const SITE_URL = process.env.SITE_URL || 'https://doctor-01.vercel.app';
 const publicDir = path.resolve(process.cwd(), 'public');
 const doctorsDir = path.join(publicDir, 'sitemap.doctors');
 const metaFile = path.join(publicDir, 'sitemap.doctors.meta.json');
-const isCI = !!(process.env.CI || process.env.VERCEL);
+const isCI = !!process.env.CI && !process.env.VERCEL;
 
 // Static pages list
 const staticPages = [
