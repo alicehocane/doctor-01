@@ -60,7 +60,8 @@
     "vaul": "^0.9.6",
     "zod": "^3.24.1",
     "@supabase/auth-helpers-nextjs": "latest",
-    "@supabase/supabase-js": "latest"
+    "@supabase/supabase-js": "latest",
+    "firebase-admin": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",
