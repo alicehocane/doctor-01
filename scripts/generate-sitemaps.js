@@ -24,7 +24,7 @@ if (!admin.apps.length) {
 const db = admin.firestore()
 
 // ---------- LOAD META ----------
-let meta: { lastTimestamp?: string } = {}
+let meta = {}
 if (fs.existsSync(metaFile)) {
   try {
     meta = JSON.parse(fs.readFileSync(metaFile, 'utf-8'))
@@ -33,28 +33,34 @@ if (fs.existsSync(metaFile)) {
 
 // ---------- FETCH NEW OR ALL DOCTORS ----------
 async function fetchDocs() {
-  let q = db.collection('doctors').orderBy('createdAt')
+  let query = db.collection('doctors').orderBy('createdAt')
   if (meta.lastTimestamp) {
-    q = q.where('createdAt', '>', new Date(meta.lastTimestamp))
+    query = query.where('createdAt', '>', new Date(meta.lastTimestamp))
   }
-  const snapshot = await q.get()
-  return snapshot.docs.map(d => ({
-    slug: d.data().slug,
-    lastmod: d.updateTime.toDate().toISOString(),
-    createdAt: d.data().createdAt.toDate().toISOString(),
+  const snapshot = await query.get()
+  return snapshot.docs.map(doc => ({
+    slug: doc.data().slug,
+    lastmod: doc.updateTime.toDate().toISOString(),
+    createdAt: doc.data().createdAt.toDate().toISOString(),
   }))
 }
 
 // ---------- WRITE A PAGE ----------
-function writePage(pageIndex: number, docs: Array<{slug: string,lastmod: string}>) {
-  const xml = [
+function writePage(pageIndex, docs) {
+  const xmlLines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...docs.map(d =>
-      `  <url>\n    <loc>${SITE_URL}/doctors/${d.slug}</loc>\n    <lastmod>${d.lastmod}</lastmod>\n  </url>`
-    ),
-    '</urlset>'
-  ].join('\n')
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+  ]
+  docs.forEach(d => {
+    xmlLines.push(
+      `  <url>`,
+      `    <loc>${SITE_URL}/doctors/${d.slug}</loc>`,
+      `    <lastmod>${d.lastmod}</lastmod>`,
+      `  </url>`
+    )
+  })
+  xmlLines.push('</urlset>')
+  const xml = xmlLines.join('\n')
   fs.writeFileSync(path.join(doctorsDir, `${pageIndex}.xml`), xml)
 }
 
@@ -68,25 +74,26 @@ function writePage(pageIndex: number, docs: Array<{slug: string,lastmod: string}
   }
 
   // Read existing docs (if any)
-  let allDocs: Array<{slug:string,lastmod:string}> = []
+  let allDocs = []
   if (fs.existsSync(doctorsDir)) {
-    const files = fs.readdirSync(doctorsDir).
-      filter(f => f.endsWith('.xml')).
-      sort((a,b) => parseInt(a) - parseInt(b))
-    for (const file of files) {
-      const content = fs.readFileSync(path.join(doctorsDir,file), 'utf-8')
-      const matches = [...content.matchAll(/<loc>([^<]+)<\/loc>\s*<lastmod>([^<]+)<\/lastmod>/g)]
-      matches.forEach(m => {
-        const loc = m[1]
-        const slug = loc.split('/').pop()!
-        const lastmod = m[2]
+    const files = fs.readdirSync(doctorsDir)
+      .filter(f => f.endsWith('.xml'))
+      .sort((a, b) => Number(a) - Number(b))
+    files.forEach(file => {
+      const content = fs.readFileSync(path.join(doctorsDir, file), 'utf-8')
+      const regex = /<loc>([^<]+)<\/loc>\s*<lastmod>([^<]+)<\/lastmod>/g
+      let match
+      while ((match = regex.exec(content))) {
+        const loc = match[1]
+        const slug = loc.split('/').pop()
+        const lastmod = match[2]
         allDocs.push({ slug, lastmod })
-      })
-    }
+      }
+    })
   }
 
   // Append new docs
-  allDocs = allDocs.concat(newDocs.map(d => ({ slug: d.slug, lastmod: d.lastmod })))
+  newDocs.forEach(d => allDocs.push({ slug: d.slug, lastmod: d.lastmod }))
 
   // Ensure output dirs exist
   fs.rmSync(doctorsDir, { recursive: true, force: true })
@@ -100,14 +107,19 @@ function writePage(pageIndex: number, docs: Array<{slug: string,lastmod: string}
   }
 
   // Write index
-  const indexXml = [
+  const indexLines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...Array.from({ length: pages }, (_, i) =>
-      `  <sitemap>\n    <loc>${SITE_URL}/sitemap.doctors/${i+1}.xml</loc>\n  </sitemap>`
-    ),
-    '</sitemapindex>'
-  ].join('\n')
+    '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+  ]
+  for (let i = 1; i <= pages; i++) {
+    indexLines.push(
+      `  <sitemap>`,
+      `    <loc>${SITE_URL}/sitemap.doctors/${i}.xml</loc>`,
+      `  </sitemap>`
+    )
+  }
+  indexLines.push('</sitemapindex>')
+  const indexXml = indexLines.join('\n')
   fs.writeFileSync(path.join(publicDir, 'sitemap.doctors.xml'), indexXml)
 
   // Update meta
