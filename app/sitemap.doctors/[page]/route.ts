@@ -1,11 +1,9 @@
-'use server';                         
-
-export const runtime   = 'nodejs';    
-export const dynamic   = 'force-dynamic';
-export const revalidate = 604800;     
+'use server';
+export const dynamic    = 'force-dynamic';
+export const revalidate = 604800; // 7 days
 
 import { NextResponse } from 'next/server';
-import { firestore } from '@/lib/firebase-admin';
+import { firestore }    from '@/lib/firebase-admin';
 
 export async function GET(
   _: Request,
