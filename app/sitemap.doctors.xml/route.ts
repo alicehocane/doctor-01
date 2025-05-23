@@ -6,9 +6,9 @@ import { db }             from "@/lib/firebase-server";
 const PAGE_SIZE = 500;
 
 export async function GET() {
-  // Count documents
-  const snapshot = await db.collection("doctors").count().get();
-  const total    = snapshot.data().count ?? 0;
+  // Fetch all doctor documents and count
+  const snapshot = await db.collection("doctors").get();
+  const total    = snapshot.size;
   const pages    = Math.ceil(total / PAGE_SIZE);
   const now      = formatISO(new Date());
 
@@ -28,4 +28,4 @@ export async function GET() {
 
 export function HEAD() {
   return GET();
-}
+} 
