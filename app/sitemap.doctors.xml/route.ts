@@ -1,4 +1,4 @@
-// app/sitemap.doctors.xml/route.ts
+// app/sitemap.doctors.xml/route.ts  <-- Doctor sitemap index (paginated)
 import { MetadataRoute } from "next"
 import { adminDb } from "@/lib/firebaseAdmin"
 

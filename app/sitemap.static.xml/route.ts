@@ -1,4 +1,4 @@
-// app/sitemap.static.xml/route.ts
+// app/sitemap.static.xml/route.ts  <-- Static pages sitemap
 import { MetadataRoute } from "next"
 
 export default function sitemap(): MetadataRoute.Sitemap {

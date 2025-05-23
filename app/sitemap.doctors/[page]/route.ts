@@ -1,35 +1,22 @@
-// File: app/sitemap.doctors/[page]/route.ts
-import { db } from "@/lib/firebase-server"
-import { collection, getDocs, query, orderBy, limit, startAt } from "firebase/firestore"
+// app/sitemap.doctors/[page]/route.ts  <-- Paginated doctor sitemap pages
 import { MetadataRoute } from "next"
-import { NextRequest } from "next/server"
+import { adminDb } from "@/lib/firebaseAdmin"
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { page: string } }
-): Promise<MetadataRoute.Sitemap> {
+export default async function sitemap({ params }: { params: { page: string } }): Promise<MetadataRoute.Sitemap> {
+  const page = parseInt(params.page, 10)
   const pageSize = 500
-  const page = parseInt(params.page)
+  const offset = (page - 1) * pageSize
 
-  if (isNaN(page) || page < 1) {
-    return []
-  }
+  const snapshot = await adminDb.collection("doctors")
+    .orderBy("slug")
+    .offset(offset)
+    .limit(pageSize)
+    .get()
 
-  const allDoctorsSnapshot = await getDocs(query(collection(db, "doctors"), orderBy("createdAt")))
-  const startIndex = (page - 1) * pageSize
-  const endIndex = page * pageSize
-
-  const pageDocs = allDoctorsSnapshot.docs.slice(startIndex, endIndex)
-
-  const urls = pageDocs.map((doc) => {
-    const doctor = doc.data()
-    return {
-      url: `https://yourdomain.com/doctor/${doc.id}`,
-      lastModified: doctor.updatedAt ? new Date(doctor.updatedAt.toDate()) : new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
-    }
-  })
+  const urls = snapshot.docs.map(doc => ({
+    url: `https://yourdomain.com/doctors/${doc.data().slug}`,
+    lastModified: doc.updateTime?.toDate(),
+  }))
 
   return urls
 }

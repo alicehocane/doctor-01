@@ -1,16 +1,16 @@
-// FILE: app/sitemap.xml/route.ts
+// app/sitemap.xml/route.ts  <-- Main sitemap index
 import { MetadataRoute } from "next"
 
 export default function sitemap(): MetadataRoute.SitemapIndex {
-  const baseUrl = "https://doctor-01.vercel.app"
   return [
     {
-      url: `${baseUrl}/sitemap.static.xml`,
-      lastModified: new Date().toISOString(),
+      url: "https://yourdomain.com/sitemap.static.xml",
+      lastModified: new Date(),
     },
     {
-      url: `${baseUrl}/sitemap.doctors.xml`,
-      lastModified: new Date().toISOString(),
+      url: "https://yourdomain.com/sitemap.doctors.xml",
+      lastModified: new Date(),
     },
+    // Add other sitemap indexes (e.g., posts) as needed
   ]
 }
