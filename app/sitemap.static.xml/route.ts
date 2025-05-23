@@ -33,4 +33,3 @@ ${urlset}
     headers: { 'Content-Type': 'application/xml' },
   });
 }
-

@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 
 /**
@@ -22,3 +23,4 @@ export async function GET() {
     headers: { 'Content-Type': 'application/xml' },
   });
 }
+
