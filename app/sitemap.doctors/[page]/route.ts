@@ -1,14 +1,12 @@
+// app/sitemap.doctors/[page]/route.ts
 'use server';
+
 import { NextResponse } from 'next/server';
 import { firestore } from '@/lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 604800; // Revalidate once per week
+export const revalidate = 604800; // 7 days
 
-/**
- * Dynamic paginated doctor sitemap.
- * @param params.page Page number of the sitemap.
- */
 export async function GET(
   _: Request,
   { params }: { params: { page: string } }
