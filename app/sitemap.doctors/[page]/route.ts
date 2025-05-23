@@ -1,11 +1,11 @@
-export const runtime   = 'nodejs';     // ← force Node.js runtime
-'use server';                         // ← must be first TS directive
+'use server';                         
+
+export const runtime   = 'nodejs';    
+export const dynamic   = 'force-dynamic';
+export const revalidate = 604800;     
 
 import { NextResponse } from 'next/server';
 import { firestore } from '@/lib/firebase-admin';
-
-export const dynamic    = 'force-dynamic';
-export const revalidate = 604800;     // 7 days
 
 export async function GET(
   _: Request,
