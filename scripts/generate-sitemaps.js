@@ -67,6 +67,14 @@ function writePage(pageIndex, docs) {
 // ---------- MAIN ----------
 ;(async () => {
   console.log('🔄 Checking for new doctors since', meta.lastTimestamp || 'start')
+  // Skip initial full generation if no meta file to avoid quota limits
+  if (!fs.existsSync(metaFile)) {
+    console.log('⚠️  No meta file found. Skipping initial generation to avoid Firestore quota limits.');
+    console.log('    Please run this script locally once to seed the initial sitemaps:');
+    console.log('      node scripts/generate-sitemaps.js');
+    return;
+  }
+
   const newDocs = await fetchDocs()
   if (newDocs.length === 0) {
     console.log('✅ No new doctors, skipping sitemap generation.')
