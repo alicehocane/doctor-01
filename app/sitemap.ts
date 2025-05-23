@@ -1,60 +1,73 @@
 // app/sitemap.ts
+// Disable static prerendering: generate dynamically to avoid quota at build
+export const dynamic = 'force-dynamic';
+// Revalidate once per day (86400 seconds)
+export const revalidate = 86400;
+
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/firebase-server";
 
 const SITE_URL = process.env.SITE_URL ?? "https://yourdomain.com";
+const DOCTORS_PAGE_SIZE = 50000;
 
-// Generate sitemap index entries (one per paginated sitemap)
-export async function generateSitemaps() {
-  const snapshot = await db.collection("doctors").get();
-  const total = snapshot.size;
-  const pages = Math.ceil(total / 50000);
+// Generate sitemap shard IDs based on doctor count
+export async function generateSitemaps(): Promise<{ id: number }[]> {
+  // Aggregate count instead of full document fetch
+  const agg = await db.collection("doctors").count().get();
+  const total = agg.data().count ?? 0;
+  const pages = Math.ceil(total / DOCTORS_PAGE_SIZE);
   return Array.from({ length: pages }, (_, i) => ({ id: i + 1 }));
 }
 
-// Return the actual URLs for each sitemap (static + doctors)
-export default async function sitemap({ id }: { id: number }): Promise<MetadataRoute.Sitemap> {
-  // Static pages
-  const staticUrls: MetadataRoute.Sitemap = [
-    {
-      url: `${SITE_URL}/`,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 1,
-    },
-    {
-      url: `${SITE_URL}/about`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    // Add more static pages here
-  ];
+// Build each sitemap shard (static + doctors)
+export default async function sitemap({
+  params,
+}: {
+  params: { id: string };
+}): Promise<MetadataRoute.Sitemap> {
+  const id = parseInt(params.id, 10);
+  const urls: MetadataRoute.Sitemap = [];
 
-  // Doctor pages for this shard
-  const offset = (id - 1) * 50000;
+  // Include static pages in first shard
+  if (id === 1) {
+    urls.push(
+      {
+        url: `${SITE_URL}/`,
+        lastModified: new Date(),
+        changeFrequency: "daily",
+        priority: 1,
+      },
+      {
+        url: `${SITE_URL}/about`,
+        lastModified: new Date(),
+        changeFrequency: "monthly",
+        priority: 0.7,
+      },
+      {
+        url: `${SITE_URL}/contact`,
+        lastModified: new Date(),
+        changeFrequency: "monthly",
+        priority: 0.7,
+      }
+    );
+  }
+
+  // Fetch doctor pages for this shard
+  const offset = (id - 1) * DOCTORS_PAGE_SIZE;
   const snap = await db
     .collection("doctors")
     .orderBy("slug")
     .offset(offset)
-    .limit(50000)
+    .limit(DOCTORS_PAGE_SIZE)
     .get();
 
-  const doctorUrls = snap.docs.map((doc) => {
+  snap.docs.forEach((doc) => {
     const data = doc.data();
-    return {
+    urls.push({
       url: `${SITE_URL}/doctors/${data.slug}`,
       lastModified: doc.updateTime?.toDate() ?? new Date(),
-    };
+    });
   });
 
-  // Combine static and first page of doctors
-  if (id === 1) {
-    return [...staticUrls, ...doctorUrls];
-  }
-  // Only doctors for subsequent pages
-  return doctorUrls;
+  return urls;
 }
-
-// Revalidate sitemap once per day
-export const revalidate = 86400;
