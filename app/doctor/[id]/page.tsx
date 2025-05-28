@@ -13,29 +13,32 @@ interface DoctorPageProps {
 
 // This would be replaced with a server-side data fetch in a real app
 export async function generateMetadata({ params }: DoctorPageProps): Promise<Metadata> {
-  // Mock data for demonstration
-  const doctorName = "Dr. Luis Felipe Aguilar Aguilar"
-  const specialty = "Cardiólogo"
+  // Initialize Firebase Admin (you might need to import your firebase admin setup)
+  const db = getFirestore();
+  
+  try {
+    // Fetch doctor data from Firestore
+    const docRef = doc(db, "doctors", params.id);
+    const docSnap = await getDoc(docRef);
 
-  return {
-    title: `${doctorName} - ${specialty} | Busca Doctor México`,
-    description: `Información de contacto y perfil profesional de ${doctorName}, ${specialty} en México.`,
+    if (!docSnap.exists()) {
+      throw new Error("Doctor not found");
+    }
+
+    const doctorData = docSnap.data();
+    const doctorName = doctorData.name || "Doctor";
+    const specialty = doctorData.specialty || "Especialidad no especificada";
+
+    return {
+      title: `${doctorName} - ${specialty} | Busca Doctor México`,
+      description: `Información de contacto y perfil profesional de ${doctorName}, ${specialty} en México.`,
+    };
+  } catch (error) {
+    console.error("Error fetching doctor data:", error);
+    // Fallback metadata if there's an error
+    return {
+      title: "Doctor | Busca Doctor México",
+      description: "Perfil profesional del doctor en México.",
+    };
   }
-}
-
-export default function DoctorPage({ params }: DoctorPageProps) {
-  const { id } = params
-
-  return (
-    <MainLayout showSearch={false}>
-      <Button variant="ghost" asChild className="mb-6">
-        <Link href="/buscar">
-          <ChevronLeft className="mr-2 h-4 w-4" />
-          Volver a resultados
-        </Link>
-      </Button>
-
-      <DoctorProfile id={id} />
-    </MainLayout>
-  )
 }
