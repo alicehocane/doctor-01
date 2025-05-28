@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import DoctorCard from "@/components/doctor-card"
 import { Button } from "@/components/ui/button"
@@ -43,10 +43,25 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
   const [totalDoctors, setTotalDoctors] = useState(0)
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null)
   const itemsPerPage = 15
+  
+  // Track previous search values
+  const prevSearchRef = useRef({ tipo, valor })
 
   // Reset pagination when search parameters change
   useEffect(() => {
-    setCurrentPage(1)
+    if (prevSearchRef.current.tipo !== tipo || prevSearchRef.current.valor !== valor) {
+      setCurrentPage(1)
+      setDoctors([]) // Clear existing doctors
+      setLastVisible(null) // Reset pagination cursor
+      
+      // Clear cache entries for the previous search
+      Object.keys(doctorsCache).forEach(key => {
+        if (key.startsWith(`${prevSearchRef.current.tipo}-${prevSearchRef.current.valor}-`)) {
+          delete doctorsCache[key]
+        }
+      })
+    }
+    prevSearchRef.current = { tipo, valor }
   }, [tipo, valor])
 
   // Create a unique cache key based on search parameters and page
@@ -54,42 +69,12 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
     return `${tipo}-${valor}-${currentPage}`
   }, [tipo, valor, currentPage])
 
-  // Enhanced priority scoring function
-  const calculatePriorityScore = useCallback((doctor: DocumentData) => {
-    let score = 0;
-    
-    // Highest priority: has diseases treated (regardless of match)
-    if (doctor.diseasesTreated?.length > 0) {
-      score += 100; // Base score for having any diseases treated
-      
-      // Additional points for matching diseases
-      if (doctor.diseasesTreated.some((d: string) => 
-        d.toLowerCase().includes(valor.toLowerCase()))) {
-        score += 50; // Extra points for matching diseases
-      }
-    }
-    
-    // Specialty matches
-    if (doctor.specialties?.some((s: string) => 
-      s.toLowerCase().includes(valor.toLowerCase()))) {
-      score += 30;
-    }
-    
-    // City matches
-    if (doctor.cities?.some((c: string) => 
-      c.toLowerCase().includes(valor.toLowerCase()))) {
-      score += 20;
-    }
-    
-    // Phone number matches
-    if (doctor.phoneNumbers?.some((p: string) => p.includes(valor))) {
-      score += 10;
-    }
-    
-    return score;
-  }, [valor]);
-
   const fetchDoctors = useCallback(async () => {
+    // Don't fetch if we're in the middle of a search change
+    if (prevSearchRef.current.tipo !== tipo || prevSearchRef.current.valor !== valor) {
+      return
+    }
+
     const cacheKey = getCacheKey()
     const cachedData = doctorsCache[cacheKey]
 
@@ -130,11 +115,9 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
 
       // Sort by priority score (descending), then by name
       const sortedDoctors = allDoctors.sort((a, b) => {
-        // First by priority score (higher first)
         if (b.priorityScore !== a.priorityScore) {
           return b.priorityScore - a.priorityScore
         }
-        // Then by name (alphabetical)
         return a.fullName?.localeCompare(b.fullName || '')
       })
 
@@ -151,7 +134,6 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
 
       setDoctors(paginatedDoctors)
       
-      // Update last visible for pagination
       if (querySnapshot.docs.length > startIdx + itemsPerPage) {
         setLastVisible(querySnapshot.docs[startIdx + itemsPerPage - 1])
       } else {
@@ -160,7 +142,6 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
 
     } catch (error) {
       console.error("Error fetching doctors:", error)
-      // Fallback to mock data
       const mockDoctors = getMockDoctors(tipo, valor)
       setDoctors(mockDoctors)
       setTotalDoctors(mockDoctors.length)
