@@ -164,7 +164,7 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
     }
   }, [tipo, valor, currentPage, calculatePriorityScore, getCacheKey])
 
-  // 1) Reset to first page whenever the search changes
+// 1) Reset to first page whenever the search changes
   useEffect(() => {
     setCurrentPage(1)
     // (optionally) clear out lastVisible if you’re using Firestore cursors:
