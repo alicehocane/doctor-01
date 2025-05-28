@@ -164,9 +164,15 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
     }
   }, [tipo, valor, currentPage, calculatePriorityScore, getCacheKey])
 
-  useEffect(() => {
-    fetchDoctors()
-  }, [fetchDoctors])
+
+    useEffect(() => {
+  setCurrentPage(1)
+}, [tipo, valor])
+
+useEffect(() => {
+  fetchDoctors()
+}, [fetchDoctors])
+
 
   // Helper function for mock data
   const getMockDoctors = (searchType: string, searchValue: string) => {
