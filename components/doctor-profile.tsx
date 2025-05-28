@@ -10,11 +10,12 @@ import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
 interface DoctorProfileProps {
-  id: string
+  id: string;
+  initialData?: any | null;
 }
 
-export default function DoctorProfile({ id }: DoctorProfileProps) {
-  const [doctor, setDoctor] = useState<any | null>(null)
+export default function DoctorProfile({ id, initialData }: DoctorProfileProps) {
+  const [doctor, setDoctor] = useState<any | null>(initialData || null);
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState({
     specialties: false,

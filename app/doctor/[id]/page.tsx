@@ -1,11 +1,10 @@
-import type { Metadata } from "next"
-import Link from "next/link"
-import { ChevronLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import DoctorProfile from "@/components/doctor-profile"
-import MainLayout from "@/components/main-layout"
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { Metadata } from "next";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import DoctorProfile from "@/components/doctor-profile";
+import MainLayout from "@/components/main-layout";
+import { getDoctorData } from "@/lib/get-doctor";
 
 interface DoctorPageProps {
   params: {
@@ -13,32 +12,29 @@ interface DoctorPageProps {
   }
 }
 
-// This would be replaced with a server-side data fetch in a real app
 export async function generateMetadata({ params }: DoctorPageProps): Promise<Metadata> {
-  try {
-    const docRef = doc(db, "doctors", params.id);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      const doctorData = docSnap.data();
-      return {
-        title: `${doctorData.fullName} - ${doctorData.specialties[0]} | Busca Doctor México`,
-        description: `Información de contacto y perfil profesional de ${doctorData.fullName}, ${doctorData.specialties.join(', ')} en México.`,
-      };
-    }
-  } catch (error) {
-    console.error("Error fetching doctor metadata:", error);
+  const doctor = await getDoctorData(params.id);
+  
+  if (!doctor) {
+    return {
+      title: "Perfil Médico | Busca Doctor México",
+      description: "Información de contacto y perfil profesional del médico."
+    };
   }
 
-  // Fallback metadata if fetch fails
   return {
-    title: `Perfil Médico | Busca Doctor México`,
-    description: `Información de contacto y perfil profesional del médico.`,
+    title: `${doctor.fullName} - ${doctor.specialties?.[0] || 'Médico'} | Busca Doctor México`,
+    description: `Información de contacto y perfil profesional de ${doctor.fullName}, ${doctor.specialties?.join(', ') || 'médico especialista'} en México.`,
+    openGraph: {
+      title: `${doctor.fullName} | Busca Doctor México`,
+      description: `Perfil profesional de ${doctor.fullName}`,
+      // Add other OG tags as needed
+    }
   };
 }
 
-export default function DoctorPage({ params }: DoctorPageProps) {
-  const { id } = params
+export default async function DoctorPage({ params }: DoctorPageProps) {
+  const doctor = await getDoctorData(params.id);
 
   return (
     <MainLayout showSearch={false}>
@@ -49,7 +45,7 @@ export default function DoctorPage({ params }: DoctorPageProps) {
         </Link>
       </Button>
 
-      <DoctorProfile id={id} />
+      <DoctorProfile id={params.id} initialData={doctor} />
     </MainLayout>
-  )
+  );
 }
