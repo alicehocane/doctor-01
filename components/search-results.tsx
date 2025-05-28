@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import DoctorCard from "@/components/doctor-card"
 import { Button } from "@/components/ui/button"
@@ -43,37 +43,52 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
   const [totalDoctors, setTotalDoctors] = useState(0)
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null)
   const itemsPerPage = 15
-  const [searchVersion, setSearchVersion] = useState(0) // Add this line
-  
-  // Track previous search values
-  const prevSearchRef = useRef({ tipo, valor })
 
-  // Reset pagination when search parameters change
-  useEffect(() => {
-    // Reset all search-related state
-    setCurrentPage(1)
-    setDoctors([])
-    setLastVisible(null)
-    setLoading(true)
+  // Create a unique cache key based on search parameters and page
+  const getCacheKey = useCallback(() => {
+    return `${tipo}-${valor}-${currentPage}`
+  }, [tipo, valor, currentPage])
+
+  // Enhanced priority scoring function
+  const calculatePriorityScore = useCallback((doctor: DocumentData) => {
+    let score = 0;
     
-    // Increment search version to trigger new fetch
-    setSearchVersion(prev => prev + 1)
-    
-    // Clear cache for previous search
-    Object.keys(doctorsCache).forEach(key => {
-      if (key.includes(`${tipo}-${valor}`)) {
-        delete doctorsCache[key]
+    // Highest priority: has diseases treated (regardless of match)
+    if (doctor.diseasesTreated?.length > 0) {
+      score += 100; // Base score for having any diseases treated
+      
+      // Additional points for matching diseases
+      if (doctor.diseasesTreated.some((d: string) => 
+        d.toLowerCase().includes(valor.toLowerCase()))) {
+        score += 50; // Extra points for matching diseases
       }
-    })
-  }, [tipo, valor])
+    }
+    
+    // Specialty matches
+    if (doctor.specialties?.some((s: string) => 
+      s.toLowerCase().includes(valor.toLowerCase()))) {
+      score += 30;
+    }
+    
+    // City matches
+    if (doctor.cities?.some((c: string) => 
+      c.toLowerCase().includes(valor.toLowerCase()))) {
+      score += 20;
+    }
+    
+    // Phone number matches
+    if (doctor.phoneNumbers?.some((p: string) => p.includes(valor))) {
+      score += 10;
+    }
+    
+    return score;
+  }, [valor]);
 
   const fetchDoctors = useCallback(async () => {
-    // Skip fetch if we don't have valid search parameters
-    if (!tipo || !valor) return
-
     const cacheKey = getCacheKey()
     const cachedData = doctorsCache[cacheKey]
 
+    // Return cached data if it exists and is fresh
     if (cachedData && Date.now() - cachedData.timestamp < CACHE_DURATION) {
       setDoctors(cachedData.doctors)
       setTotalDoctors(cachedData.totalDoctors)
@@ -110,9 +125,11 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
 
       // Sort by priority score (descending), then by name
       const sortedDoctors = allDoctors.sort((a, b) => {
+        // First by priority score (higher first)
         if (b.priorityScore !== a.priorityScore) {
           return b.priorityScore - a.priorityScore
         }
+        // Then by name (alphabetical)
         return a.fullName?.localeCompare(b.fullName || '')
       })
 
@@ -128,9 +145,8 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
       }
 
       setDoctors(paginatedDoctors)
-      setTotalDoctors(querySnapshot.size)
       
-      // Update last visible document
+      // Update last visible for pagination
       if (querySnapshot.docs.length > startIdx + itemsPerPage) {
         setLastVisible(querySnapshot.docs[startIdx + itemsPerPage - 1])
       } else {
@@ -139,6 +155,7 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
 
     } catch (error) {
       console.error("Error fetching doctors:", error)
+      // Fallback to mock data
       const mockDoctors = getMockDoctors(tipo, valor)
       setDoctors(mockDoctors)
       setTotalDoctors(mockDoctors.length)
@@ -147,13 +164,17 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
     }
   }, [tipo, valor, currentPage, calculatePriorityScore, getCacheKey])
 
-  // This effect handles the actual data fetching
+  // 1) Reset to first page whenever the search changes
   useEffect(() => {
-    // Only fetch if we have search parameters
-    if (tipo && valor) {
-      fetchDoctors()
-    }
-  }, [fetchDoctors, tipo, valor, searchVersion]) // Add searchVersion to dependencies
+    setCurrentPage(1)
+    // (optionally) clear out lastVisible if you’re using Firestore cursors:
+    setLastVisible(null)
+  }, [tipo, valor])
+
+  // 2) Fetch doctors whenever tipo, valor, or currentPage change
+  useEffect(() => {
+    fetchDoctors()
+  }, [fetchDoctors])
 
   // Helper function for mock data
   const getMockDoctors = (searchType: string, searchValue: string) => {
