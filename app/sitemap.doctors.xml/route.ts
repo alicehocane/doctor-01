@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { firestore } from '../../lib/firebase-admin';
 
 export const dynamic = 'auto';
-export const revalidate = 108000; // 7 days
+export const revalidate = 315360000; // 10 years
 
 /**
  * Generates a sitemap index of paginated doctor sitemaps.
