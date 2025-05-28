@@ -43,42 +43,37 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
   const [totalDoctors, setTotalDoctors] = useState(0)
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null)
   const itemsPerPage = 15
+  const [searchVersion, setSearchVersion] = useState(0) // Add this line
   
   // Track previous search values
   const prevSearchRef = useRef({ tipo, valor })
 
   // Reset pagination when search parameters change
   useEffect(() => {
-    if (prevSearchRef.current.tipo !== tipo || prevSearchRef.current.valor !== valor) {
-      setCurrentPage(1)
-      setDoctors([]) // Clear existing doctors
-      setLastVisible(null) // Reset pagination cursor
-      
-      // Clear cache entries for the previous search
-      Object.keys(doctorsCache).forEach(key => {
-        if (key.startsWith(`${prevSearchRef.current.tipo}-${prevSearchRef.current.valor}-`)) {
-          delete doctorsCache[key]
-        }
-      })
-    }
-    prevSearchRef.current = { tipo, valor }
+    // Reset all search-related state
+    setCurrentPage(1)
+    setDoctors([])
+    setLastVisible(null)
+    setLoading(true)
+    
+    // Increment search version to trigger new fetch
+    setSearchVersion(prev => prev + 1)
+    
+    // Clear cache for previous search
+    Object.keys(doctorsCache).forEach(key => {
+      if (key.includes(`${tipo}-${valor}`)) {
+        delete doctorsCache[key]
+      }
+    })
   }, [tipo, valor])
 
-  // Create a unique cache key based on search parameters and page
-  const getCacheKey = useCallback(() => {
-    return `${tipo}-${valor}-${currentPage}`
-  }, [tipo, valor, currentPage])
-
   const fetchDoctors = useCallback(async () => {
-    // Don't fetch if we're in the middle of a search change
-    if (prevSearchRef.current.tipo !== tipo || prevSearchRef.current.valor !== valor) {
-      return
-    }
+    // Skip fetch if we don't have valid search parameters
+    if (!tipo || !valor) return
 
     const cacheKey = getCacheKey()
     const cachedData = doctorsCache[cacheKey]
 
-    // Return cached data if it exists and is fresh
     if (cachedData && Date.now() - cachedData.timestamp < CACHE_DURATION) {
       setDoctors(cachedData.doctors)
       setTotalDoctors(cachedData.totalDoctors)
@@ -133,7 +128,9 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
       }
 
       setDoctors(paginatedDoctors)
+      setTotalDoctors(querySnapshot.size)
       
+      // Update last visible document
       if (querySnapshot.docs.length > startIdx + itemsPerPage) {
         setLastVisible(querySnapshot.docs[startIdx + itemsPerPage - 1])
       } else {
@@ -150,9 +147,13 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
     }
   }, [tipo, valor, currentPage, calculatePriorityScore, getCacheKey])
 
+  // This effect handles the actual data fetching
   useEffect(() => {
-    fetchDoctors()
-  }, [fetchDoctors])
+    // Only fetch if we have search parameters
+    if (tipo && valor) {
+      fetchDoctors()
+    }
+  }, [fetchDoctors, tipo, valor, searchVersion]) // Add searchVersion to dependencies
 
   // Helper function for mock data
   const getMockDoctors = (searchType: string, searchValue: string) => {
