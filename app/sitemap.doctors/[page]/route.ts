@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { firestore } from '../../../lib/firebase-admin';
 
 export const dynamic = 'auto';
-export const revalidate = 60 * 60 * 24 * 30; // 30 dayss 
+export const revalidate = 2592000; // 30 dayss 
 /**
  * Dynamic paginated doctor sitemap.
  * @param params.page Page number of the sitemapss
