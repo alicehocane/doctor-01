@@ -1,34 +1,41 @@
-// app/doctor/[id]/page.tsx
-import { getServerDoc } from "@/lib/firebase-server";
+import type { Metadata } from "next"
+import { firestore } from "@/lib/firebase-admin"
+import { doc, getDoc } from "firebase-admin/firestore" // note: admin SDK
 
-export async function generateMetadata({ params }: DoctorPageProps) {
-  const doctor = await getServerDoc("doctors", params.id);
-  
-  return {
-    title: doctor 
-      ? `${doctor.fullName} | Busca Doctor México` 
-      : "Perfil de Médico",
-    description: doctor
-      ? `Perfil profesional de ${doctor.fullName}, ${doctor.specialties?.join(', ') || 'Especialista'}`
-      : "Información de contacto del médico",
-    alternates: {
-      canonical: `https://www.buscadoctormexico.mx/doctor/${params.id}`,
-    },
-  };
+interface DoctorPageProps {
+  params: {
+    id: string
+  }
 }
 
-export default async function DoctorPage({ params }: DoctorPageProps) {
-  const doctor = await getServerDoc("doctors", params.id);
+export async function generateMetadata({ params }: DoctorPageProps): Promise<Metadata> {
+  const { id } = params
 
-  return (
-    <MainLayout showSearch={false}>
-      <Button variant="ghost" asChild className="mb-6">
-        <Link href="/buscar">
-          <ChevronLeft className="mr-2 h-4 w-4" />
-          Volver a resultados
-        </Link>
-      </Button>
-      <DoctorProfile initialData={doctor} id={params.id} />
-    </MainLayout>
-  );
+  try {
+    const docRef = firestore.collection("doctors").doc(id)
+    const snapshot = await docRef.get()
+
+    if (!snapshot.exists) {
+      return {
+        title: "Doctor no encontrado | Busca Doctor México",
+        description: "Este perfil de doctor no está disponible.",
+      }
+    }
+
+    const data = snapshot.data()
+    const doctorName = data?.name || "Doctor desconocido"
+    const specialty = data?.specialty || "Especialidad no disponible"
+
+    return {
+      title: `${doctorName} - ${specialty} | Busca Doctor México`,
+      description: `Información de contacto y perfil profesional de ${doctorName}, ${specialty} en México.`,
+    }
+  } catch (error) {
+    console.error("Error generating metadata:", error)
+
+    return {
+      title: "Error al cargar doctor | Busca Doctor México",
+      description: "Hubo un problema al cargar la información del doctor.",
+    }
+  }
 }
