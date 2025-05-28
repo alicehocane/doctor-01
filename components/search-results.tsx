@@ -44,6 +44,11 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null)
   const itemsPerPage = 15
 
+  // Reset pagination when search parameters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [tipo, valor])
+
   // Create a unique cache key based on search parameters and page
   const getCacheKey = useCallback(() => {
     return `${tipo}-${valor}-${currentPage}`
@@ -164,15 +169,9 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
     }
   }, [tipo, valor, currentPage, calculatePriorityScore, getCacheKey])
 
-
-    useEffect(() => {
-  setCurrentPage(1)
-}, [tipo, valor])
-
-useEffect(() => {
-  fetchDoctors()
-}, [fetchDoctors])
-
+  useEffect(() => {
+    fetchDoctors()
+  }, [fetchDoctors])
 
   // Helper function for mock data
   const getMockDoctors = (searchType: string, searchValue: string) => {
