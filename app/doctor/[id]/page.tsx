@@ -4,7 +4,6 @@ import { ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import DoctorProfile from "@/components/doctor-profile"
 import MainLayout from "@/components/main-layout"
-import { getServerDoc } from "@/lib/firebase-server" // <-- import helper
 
 interface DoctorPageProps {
   params: {
@@ -12,20 +11,11 @@ interface DoctorPageProps {
   }
 }
 
+// This would be replaced with a server-side data fetch in a real app
 export async function generateMetadata({ params }: DoctorPageProps): Promise<Metadata> {
-  const { id } = params
-
-  const doctor = await getServerDoc("doctors", id)
-
-  if (!doctor) {
-    return {
-      title: "Doctor no encontrado | Busca Doctor México",
-      description: "Este perfil de doctor no está disponible.",
-    }
-  }
-
-  const doctorName = doctor.name || "Doctor desconocido"
-  const specialty = doctor.specialty || "Especialidad no disponible"
+  // Mock data for demonstration
+  const doctorName = "Dr. Luis Felipe Aguilar Aguilar"
+  const specialty = "Cardiólogo"
 
   return {
     title: `${doctorName} - ${specialty} | Busca Doctor México`,
