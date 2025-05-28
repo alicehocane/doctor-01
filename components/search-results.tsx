@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import DoctorCard from "@/components/doctor-card"
 import { Button } from "@/components/ui/button"
@@ -24,17 +24,6 @@ interface SearchResultsProps {
   valor: string
 }
 
-// Cache object outside the component
-let doctorsCache: {
-  [key: string]: {
-    doctors: DocumentData[]
-    totalDoctors: number
-    timestamp: number
-  }
-} = {}
-const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000 // 1 week in milliseconds
-
-
 export default function SearchResults({ tipo, valor }: SearchResultsProps) {
   const router = useRouter()
   const [doctors, setDoctors] = useState<DocumentData[]>([])
@@ -44,13 +33,8 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null)
   const itemsPerPage = 15
 
-  // Create a unique cache key based on search parameters and page
-  const getCacheKey = useCallback(() => {
-    return `${tipo}-${valor}-${currentPage}`
-  }, [tipo, valor, currentPage])
-
   // Enhanced priority scoring function
-  const calculatePriorityScore = useCallback((doctor: DocumentData) => {
+  const calculatePriorityScore = (doctor: DocumentData) => {
     let score = 0;
     
     // Highest priority: has diseases treated (regardless of match)
@@ -82,99 +66,73 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
     }
     
     return score;
-  }, [valor]);
+  };
 
-  const fetchDoctors = useCallback(async () => {
-    const cacheKey = getCacheKey()
-    const cachedData = doctorsCache[cacheKey]
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      setLoading(true);
+      try {
+        const doctorsRef = collection(db, "doctors");
+        let q;
 
-    // Return cached data if it exists and is fresh
-    if (cachedData && Date.now() - cachedData.timestamp < CACHE_DURATION) {
-      setDoctors(cachedData.doctors)
-      setTotalDoctors(cachedData.totalDoctors)
-      setLoading(false)
-      return
-    }
-
-    setLoading(true)
-    try {
-      const doctorsRef = collection(db, "doctors")
-      let q
-
-      // Create base query based on search type
-      if (tipo === "ciudad") {
-        q = query(doctorsRef, where("cities", "array-contains", valor))
-      } else if (tipo === "especialidad") {
-        q = query(doctorsRef, where("specialties", "array-contains", valor))
-      } else if (tipo === "padecimiento") {
-        q = query(doctorsRef, where("diseasesTreated", "array-contains", valor))
-      } else {
-        // General search across multiple fields
-        q = query(doctorsRef)
-      }
-
-      const querySnapshot = await getDocs(q)
-      setTotalDoctors(querySnapshot.size)
-
-      // Process and sort doctors
-      const allDoctors = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        priorityScore: calculatePriorityScore(doc.data())
-      }))
-
-      // Sort by priority score (descending), then by name
-      const sortedDoctors = allDoctors.sort((a, b) => {
-        // First by priority score (higher first)
-        if (b.priorityScore !== a.priorityScore) {
-          return b.priorityScore - a.priorityScore
+        // Create base query based on search type
+        if (tipo === "ciudad") {
+          q = query(doctorsRef, where("cities", "array-contains", valor));
+        } else if (tipo === "especialidad") {
+          q = query(doctorsRef, where("specialties", "array-contains", valor));
+        } else if (tipo === "padecimiento") {
+          q = query(doctorsRef, where("diseasesTreated", "array-contains", valor));
+        } else {
+          // General search across multiple fields
+          q = query(doctorsRef);
         }
-        // Then by name (alphabetical)
-        return a.fullName?.localeCompare(b.fullName || '')
-      })
 
-      // Apply pagination
-      const startIdx = (currentPage - 1) * itemsPerPage
-      const paginatedDoctors = sortedDoctors.slice(startIdx, startIdx + itemsPerPage)
+        const querySnapshot = await getDocs(q);
+        setTotalDoctors(querySnapshot.size);
 
-      // Update cache
-      doctorsCache[cacheKey] = {
-        doctors: paginatedDoctors,
-        totalDoctors: querySnapshot.size,
-        timestamp: Date.now()
+        // Process and sort doctors
+        const allDoctors = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          priorityScore: calculatePriorityScore(doc.data())
+        }));
+
+        // Sort by priority score (descending), then by name
+        const sortedDoctors = allDoctors.sort((a, b) => {
+          // First by priority score (higher first)
+          if (b.priorityScore !== a.priorityScore) {
+            return b.priorityScore - a.priorityScore;
+          }
+          // Then by name (alphabetical)
+          return a.fullName?.localeCompare(b.fullName || '');
+        });
+
+        // Apply pagination
+        const startIdx = (currentPage - 1) * itemsPerPage;
+        const paginatedDoctors = sortedDoctors.slice(startIdx, startIdx + itemsPerPage);
+
+        setDoctors(paginatedDoctors);
+        
+        // Update last visible for pagination
+        if (querySnapshot.docs.length > startIdx + itemsPerPage) {
+          setLastVisible(querySnapshot.docs[startIdx + itemsPerPage - 1]);
+        } else {
+          setLastVisible(null);
+        }
+
+      } catch (error) {
+        console.error("Error fetching doctors:", error);
+        // Fallback to mock data
+        const mockDoctors = getMockDoctors(tipo, valor);
+        setDoctors(mockDoctors);
+        setTotalDoctors(mockDoctors.length);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      setDoctors(paginatedDoctors)
-      
-      // Update last visible for pagination
-      if (querySnapshot.docs.length > startIdx + itemsPerPage) {
-        setLastVisible(querySnapshot.docs[startIdx + itemsPerPage - 1])
-      } else {
-        setLastVisible(null)
-      }
-
-    } catch (error) {
-      console.error("Error fetching doctors:", error)
-      // Fallback to mock data
-      const mockDoctors = getMockDoctors(tipo, valor)
-      setDoctors(mockDoctors)
-      setTotalDoctors(mockDoctors.length)
-    } finally {
-      setLoading(false)
-    }
-  }, [tipo, valor, currentPage, calculatePriorityScore, getCacheKey])
-
-  // 1) Reset to first page whenever the search changes
-  useEffect(() => {
-    setCurrentPage(1)
-    // (optionally) clear out lastVisible if you’re using Firestore cursors:
-    setLastVisible(null)
-  }, [tipo, valor])
-
-  // 2) Fetch doctors whenever tipo, valor, or currentPage change
-  useEffect(() => {
-    fetchDoctors()
-  }, [fetchDoctors])
+    fetchDoctors();
+  }, [tipo, valor, currentPage]);
 
   // Helper function for mock data
   const getMockDoctors = (searchType: string, searchValue: string) => {
@@ -210,31 +168,31 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
         addresses: ["Consultorio particular - Av. San Pedro 123"],
         phoneNumbers: ["8187654321"],
       }
-    ]
+    ];
 
     // Filter mock data based on search type and value
     return allMockDoctors.filter(doctor => {
-      if (!searchType) return true
+      if (!searchType) return true;
       
-      const searchValLower = searchValue.toLowerCase()
+      const searchValLower = searchValue.toLowerCase();
       
       if (searchType === "ciudad") {
-        return doctor.cities?.some(c => c.toLowerCase().includes(searchValLower))
+        return doctor.cities?.some(c => c.toLowerCase().includes(searchValLower));
       } else if (searchType === "especialidad") {
-        return doctor.specialties?.some(s => s.toLowerCase().includes(searchValLower))
+        return doctor.specialties?.some(s => s.toLowerCase().includes(searchValLower));
       } else if (searchType === "padecimiento") {
-        return doctor.diseasesTreated?.some(d => d.toLowerCase().includes(searchValLower))
+        return doctor.diseasesTreated?.some(d => d.toLowerCase().includes(searchValLower));
       }
-      return true
-    })
-  }
+      return true;
+    });
+  };
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page)
-  }
+    setCurrentPage(page);
+  };
 
   if (loading) {
-    return <SearchResultsSkeleton />
+    return <SearchResultsSkeleton />;
   }
 
   if (doctors.length === 0) {
@@ -242,10 +200,10 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
       <div className="text-center py-12">
         <p className="text-muted-foreground">No se encontraron médicos que coincidan con tu búsqueda.</p>
       </div>
-    )
+    );
   }
 
-  const totalPages = Math.ceil(totalDoctors / itemsPerPage)
+  const totalPages = Math.ceil(totalDoctors / itemsPerPage);
 
   return (
     <div>
@@ -281,5 +239,5 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
         </div>
       )}
     </div>
-  )
+  );
 }
