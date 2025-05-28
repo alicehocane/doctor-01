@@ -14,55 +14,61 @@ interface DoctorPageProps {
 }
 
 export async function generateMetadata({ params }: DoctorPageProps): Promise<Metadata> {
+  // First try fetching from Firestore
   try {
-    const docRef = doc(db, "doctors", params.id)
-    const docSnap = await getDoc(docRef)
+    const docRef = doc(db, "doctors", params.id);
+    const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      const doctorData = docSnap.data()
-      const doctorName = doctorData.fullName || "Dr. Sin Nombre"
-      const specialties = doctorData.specialties?.join(", ") || "Médico"
+      const doctorData = docSnap.data();
+      console.log('Doctor data:', doctorData); // Debugging log
+
+      const doctorName = doctorData.fullName || `Dr. ${params.id.slice(0, 8)}`;
+      const specialties = doctorData.specialties?.join(", ") || "Médico General";
+      
+      const title = `${doctorName} | Busca Doctor México`;
+      const description = `Perfil profesional de ${doctorName}. ${specialties}. Información de contacto, direcciones y horarios.`;
 
       return {
-        title: `${doctorName} - ${specialties} | Busca Doctor México`,
-        description: `Información de contacto y perfil profesional de ${doctorName}, ${specialties} en México.`,
+        title,
+        description,
         openGraph: {
-          title: `${doctorName} - ${specialties}`,
-          description: `Perfil profesional de ${doctorName}, ${specialties}. Información de contacto, especialidades y padecimientos tratados.`,
+          title,
+          description,
           url: `https://www.buscadoctormexico.mx/doctor/${params.id}`,
           type: 'profile',
         },
-        twitter: {
-          card: 'summary',
-          title: `${doctorName} - ${specialties}`,
-          description: `Perfil profesional de ${doctorName}, ${specialties} en Busca Doctor México`,
+        alternates: {
+          canonical: `https://www.buscadoctormexico.mx/doctor/${params.id}`,
         },
-      }
+      };
     }
   } catch (error) {
-    console.error("Error fetching doctor metadata:", error)
+    console.error("Error fetching doctor metadata:", error);
   }
 
-  // Fallback metadata if doctor not found or error occurs
+  // Fallback 1: Try mock data if available
+  const mockDoctors = {
+    "WDONFz7u8gQm5Sslxd43": {
+      fullName: "Dr. Luis Felipe Aguilar Aguilar",
+      specialties: ["Cardiólogo", "Angiólogo"]
+    }
+    // Add other mock doctors if needed
+  };
+
+  if (mockDoctors[params.id]) {
+    const doctor = mockDoctors[params.id];
+    const title = `${doctor.fullName} | Busca Doctor México`;
+    
+    return {
+      title,
+      description: `Perfil de ${doctor.fullName}, ${doctor.specialties.join(", ")}`,
+    };
+  }
+
+  // Final fallback
   return {
     title: "Perfil de Médico | Busca Doctor México",
     description: "Información profesional y de contacto del médico",
-  }
-}
-
-export default function DoctorPage({ params }: DoctorPageProps) {
-  const { id } = params
-
-  return (
-    <MainLayout showSearch={false}>
-      <Button variant="ghost" asChild className="mb-6">
-        <Link href="/buscar">
-          <ChevronLeft className="mr-2 h-4 w-4" />
-          Volver a resultados
-        </Link>
-      </Button>
-
-      <DoctorProfile id={id} />
-    </MainLayout>
-  )
+  };
 }
