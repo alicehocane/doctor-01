@@ -3623,9 +3623,8 @@ const FEATURED_DATA = {
     "Úlceras venosas"
   ],
 }
+
 export default function FeaturedSections() {
-  const searchParams = useSearchParams()
-  const currentCity = searchParams.get('ciudad')
   const [expandedSections, setExpandedSections] = useState({
     especialidades: false,
     ciudades: false,
@@ -3644,27 +3643,15 @@ export default function FeaturedSections() {
 
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-        {displayItems.map((item) => {
-          // Build the base URL parameters
-          const params = new URLSearchParams()
-          params.set('tipo', section === "especialidades" ? "especialidad" : section === "ciudades" ? "ciudad" : "padecimiento")
-          params.set('valor', item)
-          
-          // Include current city if it exists
-          if (currentCity) {
-            params.set('ciudad', currentCity)
-          }
-
-          return (
-            <Link
-              key={item}
-              href={`/buscar?${params.toString()}`}
-              className="text-sm hover:text-primary transition-colors p-2 rounded-md hover:bg-accent"
-            >
-              {item}
-            </Link>
-          )
-        })}
+        {displayItems.map((item) => (
+          <Link
+            key={item}
+            href={`/buscar?tipo=${section === "especialidades" ? "especialidad" : section === "ciudades" ? "ciudad" : "padecimiento"}&valor=${item}`}
+            className="text-sm hover:text-primary transition-colors p-2 rounded-md hover:bg-accent"
+          >
+            {item}
+          </Link>
+        ))}
       </div>
     )
   }
