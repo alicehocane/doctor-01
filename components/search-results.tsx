@@ -47,8 +47,11 @@ export default function SearchResults({
   const calculatePriorityScore = useCallback(
     (doc: DocumentData) => {
       let score = 0
+
+      // Base: treats any disease
       if (Array.isArray(doc.diseasesTreated)) {
         score += 100
+        // Bonus if treating the searched disease
         if (
           doc.diseasesTreated.some((d: string) =>
             d.toLowerCase().includes(valor.toLowerCase())
@@ -57,15 +60,37 @@ export default function SearchResults({
           score += 50
         }
       }
-      if (Array.isArray(doc.specialties)) {
+
+      // Bonus if specialty matches the search value
+      if (
+        Array.isArray(doc.specialties) &&
+        doc.specialties.some((s: string) =>
+          s.toLowerCase().includes(valor.toLowerCase())
+        )
+      ) {
         score += 30
       }
-      if (Array.isArray(doc.cities)) {
+
+      // Bonus if city matches the search value (when valor is a city)
+      if (
+        Array.isArray(doc.cities) &&
+        doc.cities.some((c: string) =>
+          c.toLowerCase().includes(valor.toLowerCase())
+        )
+      ) {
         score += 20
       }
-      if (Array.isArray(doc.phoneNumbers)) {
+
+      // Minor bonus if phone number contains the search term
+      if (
+        Array.isArray(doc.phoneNumbers) &&
+        doc.phoneNumbers.some((p: string) =>
+          p.includes(valor)
+        )
+      ) {
         score += 10
       }
+
       return score
     },
     [valor]
