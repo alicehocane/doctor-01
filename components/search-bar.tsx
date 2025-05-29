@@ -24,6 +24,8 @@ export default function SearchBar() {
   const fetchCities = async () => {
     try {
       const snapshot = await getDocs(collection(db, "doctors"));
+      console.log("Fetched doctor docs:", snapshot.docs.map((d) => d.data()))
+
       const uniqueCities = new Set<string>();
 
       snapshot.forEach(doc => {
