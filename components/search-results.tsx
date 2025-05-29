@@ -165,9 +165,13 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
   }, [tipo, valor, currentPage, calculatePriorityScore, getCacheKey])
 
 
-  useEffect(() => {
+ useEffect(() => {
   setCurrentPage(1)
 }, [tipo, valor])
+
+useEffect(() => {
+  fetchDoctors()
+}, [fetchDoctors])
 
 // // 1) Reset to first page whenever the search changes
 //   useEffect(() => {
