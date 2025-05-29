@@ -15,6 +15,7 @@ export default function SearchResults() {
   const tipo = searchParams.get('tipo')
   const valor = searchParams.get('valor')
   
+  
   const [doctors, setDoctors] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
@@ -45,7 +46,7 @@ export default function SearchResults() {
 
   // Main search function
   const fetchDoctors = useCallback(async () => {
-    if (!ciudad || !tipo || !valor) {
+    if (!tipo || !valor) {
       setLoading(false)
       return
     }
@@ -53,60 +54,84 @@ export default function SearchResults() {
     setLoading(true)
     
     try {
-      // OPTION 1: Parallel query approach (best for production)
-      const cityQuery = query(
-        collection(db, "doctors"),
-        where("cities", "array-contains", ciudad),
-        orderBy("fullName"),
-        limit(1000)
-      )
-
-      const typeQuery = query(
-        collection(db, "doctors"),
-        where(tipo === "especialidad" ? "specialties" : "diseasesTreated", "array-contains", valor),
-        orderBy("fullName"),
-        limit(1000)
-      )
-
-      const [citySnapshot, typeSnapshot] = await Promise.all([
-        getDocs(cityQuery),
-        getDocs(typeQuery)
-      ])
-
-      // Find intersection of results
-      const cityDoctorIds = new Set(citySnapshot.docs.map(d => d.id))
-      const matchingDoctors = typeSnapshot.docs
-        .filter(doc => cityDoctorIds.has(doc.id))
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          matchScore: calculateMatchScore(doc.data())
-        }))
-        .sort((a, b) => b.matchScore - a.matchScore)
-
-      setTotalDoctors(matchingDoctors.length)
+      let doctorsQuery;
       
-      // Paginate results
-      const startIdx = (currentPage - 1) * itemsPerPage
-      const paginated = matchingDoctors.slice(startIdx, startIdx + itemsPerPage)
-      setDoctors(paginated)
+      // Special case for city search (clicked from ciudades featured section)
+      if (tipo === "ciudad") {
+        doctorsQuery = query(
+          collection(db, "doctors"),
+          where("cities", "array-contains", valor), // Use valor which contains the city name
+          orderBy("fullName"),
+          limit(1000)
+        )
+      } 
+      // Normal case for specialty/condition search
+      else {
+        let baseQuery = query(
+          collection(db, "doctors"),
+          orderBy("fullName"),
+          limit(1000)
+        )
 
-      // Update city cache
-      if (!cityDoctorCache[ciudad]) {
-        setCityDoctorCache(prev => ({
-          ...prev,
-          [ciudad]: citySnapshot.docs.map(d => d.id)
-        }))
+        // If city is specified, add city filter
+        if (ciudad) {
+          baseQuery = query(
+            collection(db, "doctors"),
+            where("cities", "array-contains", ciudad),
+            orderBy("fullName"),
+            limit(1000)
+          )
+        }
+
+        const typeQuery = query(
+          collection(db, "doctors"),
+          where(tipo === "especialidad" ? "specialties" : "diseasesTreated", "array-contains", valor),
+          orderBy("fullName"),
+          limit(1000)
+        )
+
+        const [baseSnapshot, typeSnapshot] = await Promise.all([
+          getDocs(baseQuery),
+          getDocs(typeQuery)
+        ])
+
+        // Find intersection of results
+        const baseDoctorIds = new Set(baseSnapshot.docs.map(d => d.id))
+        const matchingDoctors = typeSnapshot.docs
+          .filter(doc => baseDoctorIds.has(doc.id))
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            matchScore: calculateMatchScore(doc.data())
+          }))
+          .sort((a, b) => b.matchScore - a.matchScore)
+
+        setTotalDoctors(matchingDoctors.length)
+        const startIdx = (currentPage - 1) * itemsPerPage
+        setDoctors(matchingDoctors.slice(startIdx, startIdx + itemsPerPage))
+        return
       }
 
+      // Execute city-only query
+      const snapshot = await getDocs(doctorsQuery)
+      const doctors = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        matchScore: 100 // All matches are equal for city search
+      }))
+
+      setTotalDoctors(doctors.length)
+      const startIdx = (currentPage - 1) * itemsPerPage
+      setDoctors(doctors.slice(startIdx, startIdx + itemsPerPage))
+
     } catch (error) {
-      console.error("Parallel query failed, falling back:", error)
-      // OPTION 2: Fallback to client-side filtering
-      await fallbackClientSideFilter()
+      console.error("Search failed:", error)
+      setDoctors([])
+      setTotalDoctors(0)
     } finally {
       setLoading(false)
     }
-  }, [ciudad, tipo, valor, currentPage, calculateMatchScore, cityDoctorCache])
+  }, [ciudad, tipo, valor, currentPage, calculateMatchScore])
 
   // Fallback method when parallel queries fail
   const fallbackClientSideFilter = useCallback(async () => {
