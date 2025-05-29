@@ -3692,16 +3692,12 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
 
   
   return (
-    // Center the bar on desktop and limit its width
+    // increase max-width to span more of the desktop viewport
     <div
-      className={`bg-card rounded-lg shadow-sm p-4 mx-auto max-w-6xl ${className}`}
+      className={`bg-card rounded-lg shadow-sm p-4 mx-auto w-full max-w-screen-xl ${className}`}
     >
-      {/* 
-        mobile: stack each control full-width (flex-col + items-stretch)
-        desktop (md+): inline row, centered (justify-center + items-end)
-      */}
       <div className="flex flex-col gap-3 items-stretch md:flex-row md:justify-center md:items-end">
-        {/* City */}
+        {/* City selector */}
         <div className="w-full md:w-1/3">
           <label htmlFor="city" className="block text-sm font-medium mb-1">
             Buscar en
@@ -3726,7 +3722,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </Select>
         </div>
 
-        {/* Search by */}
+        {/* Search-by selector */}
         {selectedCity && (
           <div className="w-full md:w-1/3">
             <label htmlFor="search-by" className="block text-sm font-medium mb-1">
@@ -3766,7 +3762,6 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                     {opt}
                   </SelectItem>
                 ))}
-
                 {shouldShowLoadMore(searchBy) && (
                   <div
                     className="flex items-center justify-center p-2 text-primary cursor-pointer hover:bg-accent"
@@ -3784,7 +3779,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         )}
 
-        {/* Button */}
+        {/* Search button */}
         <Button
           onClick={handleSearch}
           className="w-full md:w-auto"
