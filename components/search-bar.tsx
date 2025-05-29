@@ -3693,14 +3693,11 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   
   return (
     <div className={`bg-card rounded-lg shadow-sm p-4 ${className}`}>
-      {/* On mobile: stack all; on md+: row */}
-      <div className="flex flex-col gap-3 items-end justify-center md:flex-row md:justify-start">
+      {/* On mobile: stack each control in its own row; on md+: inline */}
+      <div className="flex flex-col gap-3 items-end md:flex-row md:gap-3 md:items-end">
         {/* City selector */}
         <div className="w-full md:w-1/3">
-          <label
-            htmlFor="city"
-            className="block text-sm font-medium mb-1"
-          >
+          <label htmlFor="city" className="block text-sm font-medium mb-1">
             Buscar en
           </label>
           <Select
@@ -3726,10 +3723,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
         {/* Search-by selector */}
         {selectedCity && (
           <div className="w-full md:w-1/3">
-            <label
-              htmlFor="search-by"
-              className="block text-sm font-medium mb-1"
-            >
+            <label htmlFor="search-by" className="block text-sm font-medium mb-1">
               Buscar por
             </label>
             <Select
@@ -3743,12 +3737,8 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                 <SelectValue placeholder="Tipo de búsqueda" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="especialidad">
-                  Especialidad
-                </SelectItem>
-                <SelectItem value="padecimiento">
-                  Padecimiento
-                </SelectItem>
+                <SelectItem value="especialidad">Especialidad</SelectItem>
+                <SelectItem value="padecimiento">Padecimiento</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -3757,18 +3747,10 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
         {/* Value + “Ver más” pagination */}
         {selectedCity && (
           <div className="w-full md:w-1/3">
-            <label
-              htmlFor="search-value"
-              className="block text-sm font-medium mb-1"
-            >
-              {searchBy === "especialidad"
-                ? "Especialidad"
-                : "Padecimiento"}
+            <label htmlFor="search-value" className="block text-sm font-medium mb-1">
+              {searchBy === "especialidad" ? "Especialidad" : "Padecimiento"}
             </label>
-            <Select
-              value={searchValue}
-              onValueChange={setSearchValue}
-            >
+            <Select value={searchValue} onValueChange={setSearchValue}>
               <SelectTrigger id="search-value" className="w-full">
                 <SelectValue placeholder={`Selecciona ${searchBy}`} />
               </SelectTrigger>
@@ -3788,9 +3770,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                     }}
                   >
                     <ChevronDown className="h-4 w-4 mr-2" />
-                    {loadMoreState[searchBy] < 5
-                      ? "Ver más"
-                      : "Ver más allá"}
+                    {loadMoreState[searchBy] < 5 ? "Ver más" : "Ver más allá"}
                   </div>
                 )}
               </SelectContent>
