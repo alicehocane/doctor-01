@@ -9,9 +9,10 @@ import { trackSearch } from "@/lib/search-tracker"
 import { db } from "@/lib/firebase"
 import { collection, getDocs, query, where } from "firebase/firestore"
 
+
 export default function SearchBar() {
   const router = useRouter()
-  const [cities, setCities] = useState<string[]>([])
+  const [cities, setCities] = useState<string[]>([]); // Replace `ciudades`
   const [selectedCity, setSelectedCity] = useState("")
   const [searchBy, setSearchBy] = useState<"especialidad" | "padecimiento">("especialidad")
   const [searchValue, setSearchValue] = useState("")
@@ -20,20 +21,26 @@ export default function SearchBar() {
 
   // Step 1: Load all cities dynamically
   useEffect(() => {
-    const fetchCities = async () => {
-      const doctorSnap = await getDocs(collection(db, "doctors"))
-      const uniqueCities = new Set<string>()
-      doctorSnap.forEach(doc => {
-        const data = doc.data()
-        if (Array.isArray(data.cities)) {
-          data.cities.forEach((city: string) => uniqueCities.add(city))
-        }
-      })
-      setCities(Array.from(uniqueCities).sort())
-    }
+  const fetchCities = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "doctors"));
+      const uniqueCities = new Set<string>();
 
-    fetchCities()
-  }, [])
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (Array.isArray(data.cities)) {
+          data.cities.forEach(city => uniqueCities.add(city));
+        }
+      });
+
+      setCities(Array.from(uniqueCities).sort());
+    } catch (error) {
+      console.error("Failed to fetch cities from Firestore:", error);
+    }
+  };
+
+  fetchCities();
+}, []);
 
   // Step 2: Load specialties or diseases based on city
   useEffect(() => {
@@ -88,9 +95,11 @@ export default function SearchBar() {
               <SelectValue placeholder="Selecciona una ciudad" />
             </SelectTrigger>
             <SelectContent>
-              {cities.map(city => (
-                <SelectItem key={city} value={city}>{city}</SelectItem>
-              ))}
+              {cities.map((city) => (
+  <SelectItem key={city} value={city}>
+    {city}
+  </SelectItem>
+))}
             </SelectContent>
           </Select>
         </div>
