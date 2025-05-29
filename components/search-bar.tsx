@@ -45,7 +45,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
       setIsSearching(true)
       try {
         await trackSearch(searchBy, searchValue)
-        router.push(/buscar?ciudad=${selectedCity}&tipo=${searchBy}&valor=${searchValue})
+        router.push(`/buscar?ciudad=${selectedCity}&tipo=${searchBy}&valor=${searchValue}`)
       } catch (error) {
         console.error("Error tracking search:", error)
       } finally {
@@ -55,10 +55,10 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   }
 
   return (
-    <div className={bg-card rounded-lg shadow-sm p-4 ${className}}>
-      <div className={flex gap-3 items-end ${
+    <div className={`bg-card rounded-lg shadow-sm p-4 ${className}`}>
+      <div className={`flex gap-3 items-end ${
     selectedCity ? 'flex-col md:flex-row' : 'justify-center'
-  }}>
+  }`}>
         {/* First Dropdown - City (Required) */}
         <div className="w-full md:w-1/3">
           <label htmlFor="city" className="block text-sm font-medium mb-1">
@@ -116,7 +116,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
             </label>
             <Select value={searchValue} onValueChange={setSearchValue}>
               <SelectTrigger id="search-value" className="w-full">
-                <SelectValue placeholder={Selecciona ${searchBy}} />
+                <SelectValue placeholder={`Selecciona ${searchBy}`} />
               </SelectTrigger>
               <SelectContent className="max-h-[300px] overflow-y-auto">
                 {(searchBy === "especialidad" ? allEspecialidades : allPadecimientos).map((option) => (
