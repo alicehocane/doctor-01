@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
+
 // Static data for featured sections
 const FEATURED_DATA = {
   especialidades: [
@@ -3640,13 +3641,17 @@ export default function FeaturedSections() {
 
   const renderItems = (items: string[], section: string, expanded: boolean) => {
     const displayItems = expanded ? items : items.slice(0, 8)
+    const defaultCity = "Ciudad de México" // Or let users select a default city in settings
 
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
         {displayItems.map((item) => (
           <Link
             key={item}
-            href={`/buscar?tipo=${section === "especialidades" ? "especialidad" : section === "ciudades" ? "ciudad" : "padecimiento"}&valor=${item}`}
+            href={`/buscar?ciudad=${encodeURIComponent(defaultCity)}&tipo=${
+              section === "especialidades" ? "especialidad" : 
+              section === "ciudades" ? "ciudad" : "padecimiento"
+            }&valor=${encodeURIComponent(item)}`}
             className="text-sm hover:text-primary transition-colors p-2 rounded-md hover:bg-accent"
           >
             {item}
