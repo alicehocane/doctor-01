@@ -1,7 +1,7 @@
+// components/search-results.tsx
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
 import DoctorCard from "@/components/doctor-card"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -11,70 +11,70 @@ import {
   where,
   getDocs,
   type DocumentData,
-  type QueryDocumentSnapshot,
 } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import SearchResultsSkeleton from "@/components/search-results-skeleton"
 
 interface SearchResultsProps {
-  tipo: string
+  tipo: "ciudad" | "especialidad" | "padecimiento"
   valor: string
   ciudad?: string
 }
 
-// Cache object outside the component
-let doctorsCache: {
-  [key: string]: {
-    doctors: DocumentData[]
-    totalDoctors: number
-    timestamp: number
-  }
-} = {}
+let doctorsCache: Record<
+  string,
+  { doctors: DocumentData[]; totalDoctors: number; timestamp: number }
+> = {}
 
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000 // 1 week
+const ITEMS_PER_PAGE = 15
 
-export default function SearchResults({ tipo, valor, ciudad }: SearchResultsProps) {
-  const router = useRouter()
+export default function SearchResults({
+  tipo,
+  valor,
+  ciudad,
+}: SearchResultsProps) {
   const [doctors, setDoctors] = useState<DocumentData[]>([])
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalDoctors, setTotalDoctors] = useState(0)
-  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null)
-  const itemsPerPage = 15
 
-  const getCacheKey = useCallback(() => {
-    return `${tipo}-${valor}-${ciudad ?? ""}-${currentPage}`
-  }, [tipo, valor, ciudad, currentPage])
+  const getCacheKey = useCallback(
+    () => `${tipo}-${valor}-${ciudad ?? ""}-${currentPage}`,
+    [tipo, valor, ciudad, currentPage]
+  )
 
-  const calculatePriorityScore = useCallback((doctor: DocumentData) => {
-    let score = 0
-    if (doctor.diseasesTreated?.length > 0) {
-      score += 100
-      if (doctor.diseasesTreated.some((d: string) =>
-        d.toLowerCase().includes(valor.toLowerCase())
-      )) {
-        score += 50
+  const calculatePriorityScore = useCallback(
+    (doc: DocumentData) => {
+      let score = 0
+      if (Array.isArray(doc.diseasesTreated)) {
+        score += 100
+        if (
+          doc.diseasesTreated.some((d: string) =>
+            d.toLowerCase().includes(valor.toLowerCase())
+          )
+        ) {
+          score += 50
+        }
       }
-    }
-    if (doctor.specialties?.some((s: string) =>
-      s.toLowerCase().includes(valor.toLowerCase())
-    )) {
-      score += 30
-    }
-    if (doctor.cities?.some((c: string) =>
-      c.toLowerCase().includes(valor.toLowerCase())
-    )) {
-      score += 20
-    }
-    if (doctor.phoneNumbers?.some((p: string) => p.includes(valor))) {
-      score += 10
-    }
-    return score
-  }, [valor])
+      if (Array.isArray(doc.specialties)) {
+        score += 30
+      }
+      if (Array.isArray(doc.cities)) {
+        score += 20
+      }
+      if (Array.isArray(doc.phoneNumbers)) {
+        score += 10
+      }
+      return score
+    },
+    [valor]
+  )
 
   const fetchDoctors = useCallback(async () => {
     const cacheKey = getCacheKey()
     const cached = doctorsCache[cacheKey]
+
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
       setDoctors(cached.doctors)
       setTotalDoctors(cached.totalDoctors)
@@ -85,67 +85,66 @@ export default function SearchResults({ tipo, valor, ciudad }: SearchResultsProp
     setLoading(true)
     try {
       const doctorsRef = collection(db, "doctors")
-      let q
 
+      // 1) Firestore query with only one array-contains
+      let baseQuery
       if (tipo === "ciudad") {
-        q = query(doctorsRef, where("cities", "array-contains", valor))
+        baseQuery = query(
+          doctorsRef,
+          where("cities", "array-contains", valor)
+        )
       } else if (tipo === "especialidad") {
-        q = ciudad
-          ? query(
-              doctorsRef,
-              where("specialties", "array-contains", valor),
-              where("cities", "array-contains", ciudad)
-            )
-          : query(doctorsRef, where("specialties", "array-contains", valor))
-      } else if (tipo === "padecimiento") {
-        q = ciudad
-          ? query(
-              doctorsRef,
-              where("diseasesTreated", "array-contains", valor),
-              where("cities", "array-contains", ciudad)
-            )
-          : query(doctorsRef, where("diseasesTreated", "array-contains", valor))
+        baseQuery = query(
+          doctorsRef,
+          where("specialties", "array-contains", valor)
+        )
       } else {
-        q = ciudad
-          ? query(doctorsRef, where("cities", "array-contains", ciudad))
-          : query(doctorsRef)
+        baseQuery = query(
+          doctorsRef,
+          where("diseasesTreated", "array-contains", valor)
+        )
       }
 
-      const snapshot = await getDocs(q)
-      setTotalDoctors(snapshot.size)
-
-      const allDocs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        priorityScore: calculatePriorityScore(doc.data())
+      const snap = await getDocs(baseQuery)
+      let allDocs = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
       }))
 
-      const sorted = allDocs.sort((a, b) => {
-        if (b.priorityScore !== a.priorityScore) {
-          return b.priorityScore - a.priorityScore
-        }
-        return a.fullName?.localeCompare(b.fullName || "") || 0
-      })
-
-      const startIdx = (currentPage - 1) * itemsPerPage
-      const pageDocs = sorted.slice(startIdx, startIdx + itemsPerPage)
-
-      doctorsCache[cacheKey] = {
-        doctors: pageDocs,
-        totalDoctors: snapshot.size,
-        timestamp: Date.now()
+      // 2) Client‐side filter by ciudad if needed
+      if (ciudad && tipo !== "ciudad") {
+        allDocs = allDocs.filter(
+          (doc) =>
+            Array.isArray(doc.cities) && doc.cities.includes(ciudad)
+        )
       }
 
-      setDoctors(pageDocs)
-      setLastVisible(
-        snapshot.docs.length > startIdx + itemsPerPage
-          ? snapshot.docs[startIdx + itemsPerPage - 1]
-          : null
+      // 3) Score, sort, paginate
+      const scored = allDocs.map((doc) => ({
+        ...doc,
+        priorityScore: calculatePriorityScore(doc),
+      }))
+
+      const sorted = scored.sort((a, b) =>
+        b.priorityScore - a.priorityScore ||
+        (a.fullName || "").localeCompare(b.fullName || "")
       )
-    } catch (error) {
-      console.error("Error fetching doctors:", error)
-      setTotalDoctors(0)
+
+      const start = (currentPage - 1) * ITEMS_PER_PAGE
+      const pageDocs = sorted.slice(start, start + ITEMS_PER_PAGE)
+
+      // 4) Cache & set state
+      doctorsCache[cacheKey] = {
+        doctors: pageDocs,
+        totalDoctors: sorted.length,
+        timestamp: Date.now(),
+      }
+      setDoctors(pageDocs)
+      setTotalDoctors(sorted.length)
+    } catch (err) {
+      console.error("Error fetching doctors:", err)
       setDoctors([])
+      setTotalDoctors(0)
     } finally {
       setLoading(false)
     }
@@ -155,9 +154,9 @@ export default function SearchResults({ tipo, valor, ciudad }: SearchResultsProp
     fetchDoctors()
   }, [fetchDoctors])
 
-  const handlePageChange = (page: number) => setCurrentPage(page)
-
-  if (loading) return <SearchResultsSkeleton />
+  if (loading) {
+    return <SearchResultsSkeleton />
+  }
 
   if (!doctors.length) {
     return (
@@ -169,13 +168,18 @@ export default function SearchResults({ tipo, valor, ciudad }: SearchResultsProp
     )
   }
 
-  const totalPages = Math.ceil(totalDoctors / itemsPerPage)
+  const totalPages = Math.ceil(totalDoctors / ITEMS_PER_PAGE)
 
   return (
     <div>
       <div className="space-y-4">
-        {doctors.map(doc => (
-          <DoctorCard key={doc.id} doctor={doc} searchType={tipo} searchValue={valor} />
+        {doctors.map((doc) => (
+          <DoctorCard
+            key={doc.id}
+            doctor={doc}
+            searchType={tipo}
+            searchValue={valor}
+          />
         ))}
       </div>
 
@@ -184,7 +188,7 @@ export default function SearchResults({ tipo, valor, ciudad }: SearchResultsProp
           <Button
             variant="outline"
             size="icon"
-            onClick={() => handlePageChange(currentPage - 1)}
+            onClick={() => setCurrentPage((p) => p - 1)}
             disabled={currentPage === 1}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -195,7 +199,7 @@ export default function SearchResults({ tipo, valor, ciudad }: SearchResultsProp
           <Button
             variant="outline"
             size="icon"
-            onClick={() => handlePageChange(currentPage + 1)}
+            onClick={() => setCurrentPage((p) => p + 1)}
             disabled={currentPage === totalPages}
           >
             <ChevronRight className="h-4 w-4" />
