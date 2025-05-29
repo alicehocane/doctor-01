@@ -162,8 +162,12 @@ export default function SearchResults({
   }, [tipo, valor, ciudad, currentPage, calculatePriorityScore, getCacheKey])
 
   useEffect(() => {
-    fetchDoctors()
-  }, [fetchDoctors])
+  setCurrentPage(1)
+}, [tipo, valor])
+
+useEffect(() => {
+  fetchDoctors()
+}, [fetchDoctors])
 
   if (loading) {
     return <SearchResultsSkeleton />
