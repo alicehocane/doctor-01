@@ -85,84 +85,102 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
   }, [valor]);
 
   const fetchDoctors = useCallback(async () => {
-    const cacheKey = getCacheKey()
-    const cachedData = doctorsCache[cacheKey]
+  const cacheKey = getCacheKey()
+  const cachedData = doctorsCache[cacheKey]
 
-    // Return cached data if it exists and is fresh
-    if (cachedData && Date.now() - cachedData.timestamp < CACHE_DURATION) {
-      setDoctors(cachedData.doctors)
-      setTotalDoctors(cachedData.totalDoctors)
-      setLoading(false)
-      return
-    }
+  // Return cached data if it exists and is fresh
+  if (cachedData && Date.now() - cachedData.timestamp < CACHE_DURATION) {
+    setDoctors(cachedData.doctors)
+    setTotalDoctors(cachedData.totalDoctors)
+    setLoading(false)
+    return
+  }
 
-    setLoading(true)
-    try {
-      const doctorsRef = collection(db, "doctors")
-      let q
+  setLoading(true)
+  try {
+    const doctorsRef = collection(db, "doctors")
+    let q
 
-      // Create base query based on search type
-      if (tipo === "ciudad") {
-        q = query(doctorsRef, where("cities", "array-contains", valor))
-      } else if (tipo === "especialidad") {
-        q = query(doctorsRef, where("specialties", "array-contains", valor))
-      } else if (tipo === "padecimiento") {
-        q = query(doctorsRef, where("diseasesTreated", "array-contains", valor))
+    // Create base query based on search type
+    if (tipo === "ciudad") {
+      q = query(doctorsRef, where("cities", "array-contains", valor))
+    } else if (tipo === "especialidad") {
+      // If city is provided in URL params, filter by both specialty and city
+      const urlParams = new URLSearchParams(window.location.search)
+      const ciudad = urlParams.get('ciudad')
+      if (ciudad) {
+        q = query(
+          doctorsRef,
+          where("specialties", "array-contains", valor),
+          where("cities", "array-contains", ciudad)
+        )
       } else {
-        // General search across multiple fields
-        q = query(doctorsRef)
+        q = query(doctorsRef, where("specialties", "array-contains", valor))
       }
+    } else if (tipo === "padecimiento") {
+      // If city is provided in URL params, filter by both disease and city
+      const urlParams = new URLSearchParams(window.location.search)
+      const ciudad = urlParams.get('ciudad')
+      if (ciudad) {
+        q = query(
+          doctorsRef,
+          where("diseasesTreated", "array-contains", valor),
+          where("cities", "array-contains", ciudad)
+        )
+      } else {
+        q = query(doctorsRef, where("diseasesTreated", "array-contains", valor))
+      }
+    } else {
+      // General search across multiple fields
+      q = query(doctorsRef)
+    }
 
       const querySnapshot = await getDocs(q)
-      setTotalDoctors(querySnapshot.size)
+    setTotalDoctors(querySnapshot.size)
 
-      // Process and sort doctors
-      const allDoctors = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        priorityScore: calculatePriorityScore(doc.data())
-      }))
+    // Process and sort doctors
+    const allDoctors = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      priorityScore: calculatePriorityScore(doc.data())
+    }))
 
-      // Sort by priority score (descending), then by name
-      const sortedDoctors = allDoctors.sort((a, b) => {
-        // First by priority score (higher first)
-        if (b.priorityScore !== a.priorityScore) {
-          return b.priorityScore - a.priorityScore
-        }
-        // Then by name (alphabetical)
-        return a.fullName?.localeCompare(b.fullName || '')
-      })
-
-      // Apply pagination
-      const startIdx = (currentPage - 1) * itemsPerPage
-      const paginatedDoctors = sortedDoctors.slice(startIdx, startIdx + itemsPerPage)
-
-      // Update cache
-      doctorsCache[cacheKey] = {
-        doctors: paginatedDoctors,
-        totalDoctors: querySnapshot.size,
-        timestamp: Date.now()
+    // Sort by priority score (descending), then by name
+    const sortedDoctors = allDoctors.sort((a, b) => {
+      if (b.priorityScore !== a.priorityScore) {
+        return b.priorityScore - a.priorityScore
       }
+      return a.fullName?.localeCompare(b.fullName || '')
+    })
 
-      setDoctors(paginatedDoctors)
-      
-      // Update last visible for pagination
-      if (querySnapshot.docs.length > startIdx + itemsPerPage) {
-        setLastVisible(querySnapshot.docs[startIdx + itemsPerPage - 1])
-      } else {
-        setLastVisible(null)
-      }
+    // Apply pagination
+    const startIdx = (currentPage - 1) * itemsPerPage
+    const paginatedDoctors = sortedDoctors.slice(startIdx, startIdx + itemsPerPage)
 
-    } catch (error) {
-      console.error("Error fetching doctors:", error)
-      // Fallback to mock data
-      const mockDoctors = getMockDoctors(tipo, valor)
-      setDoctors(mockDoctors)
-      setTotalDoctors(mockDoctors.length)
-    } finally {
-      setLoading(false)
+    // Update cache
+    doctorsCache[cacheKey] = {
+      doctors: paginatedDoctors,
+      totalDoctors: querySnapshot.size,
+      timestamp: Date.now()
     }
-  }, [tipo, valor, currentPage, calculatePriorityScore, getCacheKey])
+
+    setDoctors(paginatedDoctors)
+    
+    if (querySnapshot.docs.length > startIdx + itemsPerPage) {
+      setLastVisible(querySnapshot.docs[startIdx + itemsPerPage - 1])
+    } else {
+      setLastVisible(null)
+    }
+
+  } catch (error) {
+    console.error("Error fetching doctors:", error)
+    const mockDoctors = getMockDoctors(tipo, valor)
+    setDoctors(mockDoctors)
+    setTotalDoctors(mockDoctors.length)
+  } finally {
+    setLoading(false)
+  }
+}, [tipo, valor, currentPage, calculatePriorityScore, getCacheKey])
 
   useEffect(() => {
     fetchDoctors()

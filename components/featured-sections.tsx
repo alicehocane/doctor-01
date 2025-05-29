@@ -3643,18 +3643,29 @@ export default function FeaturedSections() {
 
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-        {displayItems.map((item) => (
+      {displayItems.map((item) => {
+        // Get current URL parameters
+        const urlParams = new URLSearchParams(window.location.search)
+        const ciudad = urlParams.get('ciudad')
+        
+        // Build the URL based on whether city is already selected
+        const url = ciudad 
+          ? `/buscar?tipo=${section === "especialidades" ? "especialidad" : section === "ciudades" ? "ciudad" : "padecimiento"}&valor=${item}&ciudad=${ciudad}`
+          : `/buscar?tipo=${section === "especialidades" ? "especialidad" : section === "ciudades" ? "ciudad" : "padecimiento"}&valor=${item}`
+
+        return (
           <Link
             key={item}
-            href={`/buscar?tipo=${section === "especialidades" ? "especialidad" : section === "ciudades" ? "ciudad" : "padecimiento"}&valor=${item}`}
+            href={url}
             className="text-sm hover:text-primary transition-colors p-2 rounded-md hover:bg-accent"
           >
             {item}
           </Link>
-        ))}
-      </div>
-    )
-  }
+        )
+      })}
+    </div>
+  )
+}
 
   return (
     <div className="space-y-8">

@@ -16,6 +16,7 @@ export default function SearchPage({
 }) {
   const tipo = typeof searchParams.tipo === "string" ? searchParams.tipo : ""
   const valor = typeof searchParams.valor === "string" ? searchParams.valor : ""
+  const ciudad = typeof searchParams.ciudad === "string" ? searchParams.ciudad : ""
 
   return (
     <MainLayout>
@@ -25,6 +26,11 @@ export default function SearchPage({
             Resultados para{" "}
             {tipo === "ciudad" ? "Ciudad" : tipo === "especialidad" ? "Especialidad" : "Padecimiento Atendido"}:{" "}
             <span className="text-primary">{valor}</span>
+            {ciudad && (
+              <>
+                {" "}en <span className="text-primary">{ciudad}</span>
+              </>
+            )}
           </h2>
 
           <Suspense fallback={<SearchResultsSkeleton />}>
