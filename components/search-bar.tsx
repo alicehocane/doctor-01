@@ -55,87 +55,87 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   }
 
   return (
-  <div className={`bg-card rounded-lg shadow-sm p-4 ${className}`}>
-    <div className="flex flex-col md:flex-row gap-3 items-end">
-      {/* First Dropdown - City (Required) */}
-      <div className={`w-full ${!selectedCity ? 'md:w-full text-center' : 'md:w-1/3'}`}>
-        <label htmlFor="city" className="block text-sm font-medium mb-1">
-          Buscar en (Search in)
-        </label>
-        <Select 
-          value={selectedCity} 
-          onValueChange={(value) => {
-            setSelectedCity(value)
-            setSearchValue("") // Reset search value when city changes
-          }}
-        >
-          <SelectTrigger id="city" className={`w-full ${!selectedCity ? 'mx-auto md:max-w-xs' : ''}`}>
-            <SelectValue placeholder="Selecciona una ciudad" />
-          </SelectTrigger>
-          <SelectContent>
-            {ciudades.map((city) => (
-              <SelectItem key={city} value={city}>
-                {city}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Second Dropdown - Search by (Required, only shown if city is selected) */}
-      {selectedCity && (
-        <div className="w-full md:w-1/3 transition-all duration-200">
-          <label htmlFor="search-by" className="block text-sm font-medium mb-1">
-            Buscar por (Search by)
+    <div className={`bg-card rounded-lg shadow-sm p-4 ${className}`}>
+      <div className="flex flex-col md:flex-row gap-3 items-end">
+        {/* First Dropdown - City (Required) */}
+        <div className="w-full md:w-1/3">
+          <label htmlFor="city" className="block text-sm font-medium mb-1">
+            Buscar en (Search in)
           </label>
           <Select 
-            value={searchBy} 
-            onValueChange={(value: "especialidad" | "padecimiento") => {
-              setSearchBy(value)
-              setSearchValue("") // Reset search value when search type changes
+            value={selectedCity} 
+            onValueChange={(value) => {
+              setSelectedCity(value)
+              setSearchValue("") // Reset search value when city changes
             }}
           >
-            <SelectTrigger id="search-by" className="w-full">
-              <SelectValue placeholder="Selecciona tipo de búsqueda" />
+            <SelectTrigger id="city" className="w-full">
+              <SelectValue placeholder="Selecciona una ciudad" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="especialidad">Especialidad</SelectItem>
-              <SelectItem value="padecimiento">Padecimiento</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {/* Third Dropdown - Dynamic options based on previous selections */}
-      {selectedCity && searchBy && (
-        <div className="w-full md:w-1/3 transition-all duration-200">
-          <label htmlFor="search-value" className="block text-sm font-medium mb-1">
-            {searchBy === "especialidad" ? "Especialidad" : "Padecimiento"}
-          </label>
-          <Select value={searchValue} onValueChange={setSearchValue}>
-            <SelectTrigger id="search-value" className="w-full">
-              <SelectValue placeholder={`Selecciona ${searchBy}`} />
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px] overflow-y-auto">
-              {(searchBy === "especialidad" ? allEspecialidades : allPadecimientos).map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
+              {ciudades.map((city) => (
+                <SelectItem key={city} value={city}>
+                  {city}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-      )}
 
-      <Button 
-        onClick={handleSearch} 
-        className={`w-full transition-all duration-200 ${selectedCity && searchBy ? 'md:w-auto' : 'md:w-full md:max-w-xs'}`} 
-        disabled={!selectedCity || !searchValue || isSearching}
-      >
-        <Search className="h-4 w-4 mr-2" />
-        {isSearching ? "Buscando..." : "Buscar"}
-      </Button>
+        {/* Second Dropdown - Search by (Required, only shown if city is selected) */}
+        {selectedCity && (
+          <div className="w-full md:w-1/3">
+            <label htmlFor="search-by" className="block text-sm font-medium mb-1">
+              Buscar por (Search by)
+            </label>
+            <Select 
+              value={searchBy} 
+              onValueChange={(value: "especialidad" | "padecimiento") => {
+                setSearchBy(value)
+                setSearchValue("") // Reset search value when search type changes
+              }}
+            >
+              <SelectTrigger id="search-by" className="w-full">
+                <SelectValue placeholder="Selecciona tipo de búsqueda" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="especialidad">Especialidad</SelectItem>
+                <SelectItem value="padecimiento">Padecimiento</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Third Dropdown - Dynamic options based on previous selections */}
+        {selectedCity && searchBy && (
+          <div className="w-full md:w-1/3">
+            <label htmlFor="search-value" className="block text-sm font-medium mb-1">
+              {searchBy === "especialidad" ? "Especialidad" : "Padecimiento"}
+            </label>
+            <Select value={searchValue} onValueChange={setSearchValue}>
+              <SelectTrigger id="search-value" className="w-full">
+                <SelectValue placeholder={`Selecciona ${searchBy}`} />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px] overflow-y-auto">
+                {(searchBy === "especialidad" ? allEspecialidades : allPadecimientos).map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        <Button 
+          onClick={handleSearch} 
+          className="w-full md:w-auto" 
+          disabled={!selectedCity || !searchValue || isSearching}
+        >
+          <Search className="h-4 w-4 mr-2" />
+          {isSearching ? "Buscando..." : "Buscar"}
+        </Button>
+      </div>
     </div>
-  </div>
-)
+  )
 }
