@@ -1,13 +1,44 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Search, ChevronDown } from "lucide-react"
+import { useState } from "react"
+import { Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter } from "next/navigation"
 import { trackSearch } from "@/lib/search-tracker"
-import { collection, getDocs, query, where } from "firebase/firestore"
-import { db } from "@/lib/firebase" // Make sure you have your Firebase config setup
+
+// Constant values
+const ciudades = ["Ciudad de México", "Monterrey", "Guadalajara"]
+const allEspecialidades = [
+  "Acupuntor",
+  "Alergología",
+  "Alergólogo",
+  "Algólogo",
+  "Anatomopatólogo",
+  "Anatomía patológica"
+]
+const allPadecimientos = [
+  "Abdomen agudo",
+  "Abetalipoproteinemia",
+  "Ablación de la placenta",
+  "Aborto consumado",
+  "Aborto electivo o terapéutico",
+  "Aborto espontáneo",
+  "Aborto incompleto"
+]
+
+// Mock data mapping (city to specialties/diseases)
+const citySpecialties: Record<string, string[]> = {
+  "Ciudad de México": ["Alergología", "Anatomía patológica"],
+  "Monterrey": ["Acupuntor", "Alergólogo", "Anatomopatólogo"],
+  "Guadalajara": ["Algólogo", "Anatomía patológica"]
+}
+
+const cityDiseases: Record<string, string[]> = {
+  "Ciudad de México": ["Abdomen agudo", "Abetalipoproteinemia"],
+  "Monterrey": ["Ablación de la placenta", "Aborto consumado", "Aborto electivo o terapéutico"],
+  "Guadalajara": ["Aborto espontáneo", "Aborto incompleto"]
+}
 
 interface SearchBarProps {
   className?: string
@@ -19,100 +50,29 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   const [searchBy, setSearchBy] = useState<"especialidad" | "enfermedad">("especialidad")
   const [selectedOption, setSelectedOption] = useState<string>("")
   const [isSearching, setIsSearching] = useState(false)
-  
-  // Data from Firestore
-  const [cities, setCities] = useState<string[]>([])
-  const [specialties, setSpecialties] = useState<string[]>([])
-  const [diseases, setDiseases] = useState<string[]>([])
-  const [loadingCities, setLoadingCities] = useState(true)
-  const [loadingOptions, setLoadingOptions] = useState(false)
 
-  // Load available cities on component mount
-  useEffect(() => {
-    const fetchCities = async () => {
-      try {
-        const doctorsRef = collection(db, "doctors")
-        const snapshot = await getDocs(doctorsRef)
-        
-        const citiesSet = new Set<string>()
-        snapshot.forEach(doc => {
-          const doctorData = doc.data()
-          if (doctorData.cities) {
-            doctorData.cities.forEach((city: string) => citiesSet.add(city))
-          }
-        })
-        
-        setCities(Array.from(citiesSet))
-      } catch (error) {
-        console.error("Error fetching cities:", error)
-      } finally {
-        setLoadingCities(false)
-      }
-    }
+  // Get filtered options based on selected city
+  const getFilteredOptions = () => {
+    if (!selectedCity) return []
     
-    fetchCities()
-  }, [])
-
-  // Load specialties or diseases based on selected city
-  useEffect(() => {
-    if (!selectedCity) {
-      setSpecialties([])
-      setDiseases([])
-      return
+    if (searchBy === "especialidad") {
+      return citySpecialties[selectedCity] || []
+    } else {
+      return cityDiseases[selectedCity] || []
     }
-
-    const fetchOptions = async () => {
-      setLoadingOptions(true)
-      try {
-        const doctorsRef = collection(db, "doctors")
-        const q = query(doctorsRef, where("cities", "array-contains", selectedCity))
-        const snapshot = await getDocs(q)
-        
-        const specialtiesSet = new Set<string>()
-        const diseasesSet = new Set<string>()
-        
-        snapshot.forEach(doc => {
-          const doctorData = doc.data()
-          
-          // Add specialties
-          if (doctorData.specialties) {
-            doctorData.specialties.forEach((spec: string) => specialtiesSet.add(spec))
-          }
-          if (doctorData.focusedon) {
-            doctorData.focusedon.forEach((spec: string) => specialtiesSet.add(spec))
-          }
-          
-          // Add diseases
-          if (doctorData.diseasesTreated) {
-            doctorData.diseasesTreated.forEach((disease: string) => diseasesSet.add(disease))
-          }
-        })
-        
-        setSpecialties(Array.from(specialtiesSet))
-        setDiseases(Array.from(diseasesSet))
-      } catch (error) {
-        console.error("Error fetching options:", error)
-      } finally {
-        setLoadingOptions(false)
-      }
-    }
-    
-    fetchOptions()
-  }, [selectedCity])
+  }
 
   const handleSearch = async () => {
     if ((!selectedCity) || (!selectedOption)) return
     
     setIsSearching(true)
     try {
-      // Track the search
       await trackSearch(
         searchBy === "especialidad" ? "specialty" : "disease",
         selectedOption,
         selectedCity
       )
       
-      // Navigate to results page
       router.push(
         `/buscar?ciudad=${encodeURIComponent(selectedCity)}&` +
         `${searchBy}=${encodeURIComponent(selectedOption)}`
@@ -138,13 +98,12 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               setSelectedCity(value)
               setSelectedOption("") // Reset option when city changes
             }}
-            disabled={loadingCities}
           >
             <SelectTrigger id="city" className="w-full">
-              <SelectValue placeholder={loadingCities ? "Cargando ciudades..." : "Selecciona una ciudad"} />
+              <SelectValue placeholder="Selecciona una ciudad" />
             </SelectTrigger>
             <SelectContent>
-              {cities.map((city) => (
+              {ciudades.map((city) => (
                 <SelectItem key={city} value={city}>
                   {city}
                 </SelectItem>
@@ -184,18 +143,17 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           <Select 
             value={selectedOption} 
             onValueChange={setSelectedOption}
-            disabled={!selectedCity || loadingOptions}
+            disabled={!selectedCity}
           >
             <SelectTrigger id="search-option" className="w-full">
               <SelectValue 
                 placeholder={
-                  loadingOptions ? "Cargando opciones..." : 
                   `Selecciona ${searchBy === "especialidad" ? "una especialidad" : "una enfermedad"}`
                 } 
               />
             </SelectTrigger>
             <SelectContent className="max-h-[300px] overflow-y-auto">
-              {(searchBy === "especialidad" ? specialties : diseases).map((option) => (
+              {getFilteredOptions().map((option) => (
                 <SelectItem key={option} value={option}>
                   {option}
                 </SelectItem>
