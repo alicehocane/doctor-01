@@ -56,68 +56,40 @@ export default function SearchResults() {
     try {
       let doctorsQuery;
       
-      // Special case for city search (clicked from ciudades featured section)
+      // Case 1: City search (clicked from ciudades featured section)
       if (tipo === "ciudad") {
         doctorsQuery = query(
           collection(db, "doctors"),
-          where("cities", "array-contains", valor), // Use valor which contains the city name
+          where("cities", "array-contains", valor),
           orderBy("fullName"),
           limit(1000)
         )
       } 
-      // Normal case for specialty/condition search
-      else {
-        let baseQuery = query(
+      // Case 2: Specialty or condition search with city specified
+      else if (ciudad) {
+        doctorsQuery = query(
           collection(db, "doctors"),
+          where("cities", "array-contains", ciudad),
+          where(tipo === "especialidad" ? "specialties" : "diseasesTreated", "array-contains", valor),
           orderBy("fullName"),
           limit(1000)
         )
-
-        // If city is specified, add city filter
-        if (ciudad) {
-          baseQuery = query(
-            collection(db, "doctors"),
-            where("cities", "array-contains", ciudad),
-            orderBy("fullName"),
-            limit(1000)
-          )
-        }
-
-        const typeQuery = query(
+      }
+      // Case 3: Specialty or condition search without city (from featured section)
+      else {
+        doctorsQuery = query(
           collection(db, "doctors"),
           where(tipo === "especialidad" ? "specialties" : "diseasesTreated", "array-contains", valor),
           orderBy("fullName"),
           limit(1000)
         )
-
-        const [baseSnapshot, typeSnapshot] = await Promise.all([
-          getDocs(baseQuery),
-          getDocs(typeQuery)
-        ])
-
-        // Find intersection of results
-        const baseDoctorIds = new Set(baseSnapshot.docs.map(d => d.id))
-        const matchingDoctors = typeSnapshot.docs
-          .filter(doc => baseDoctorIds.has(doc.id))
-          .map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            matchScore: calculateMatchScore(doc.data())
-          }))
-          .sort((a, b) => b.matchScore - a.matchScore)
-
-        setTotalDoctors(matchingDoctors.length)
-        const startIdx = (currentPage - 1) * itemsPerPage
-        setDoctors(matchingDoctors.slice(startIdx, startIdx + itemsPerPage))
-        return
       }
 
-      // Execute city-only query
       const snapshot = await getDocs(doctorsQuery)
       const doctors = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        matchScore: 100 // All matches are equal for city search
+        matchScore: 100 // All matches are equal since we're filtering by exact matches
       }))
 
       setTotalDoctors(doctors.length)
@@ -131,7 +103,7 @@ export default function SearchResults() {
     } finally {
       setLoading(false)
     }
-  }, [ciudad, tipo, valor, currentPage, calculateMatchScore])
+  }, [ciudad, tipo, valor, currentPage])
 
   // Fallback method when parallel queries fail
   const fallbackClientSideFilter = useCallback(async () => {

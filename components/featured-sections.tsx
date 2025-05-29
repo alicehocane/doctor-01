@@ -3633,25 +3633,21 @@ export default function FeaturedSections() {
   })
 
   const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections({
-      ...expandedSections,
-      [section]: !expandedSections[section],
-    })
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section],
+    }))
   }
 
   const renderItems = (items: string[], section: string, expanded: boolean) => {
     const displayItems = expanded ? items : items.slice(0, 8)
-    const defaultCity = "Ciudad de México" // Or let users select a default city in settings
 
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
         {displayItems.map((item) => (
           <Link
             key={item}
-            href={`/buscar?ciudad=${encodeURIComponent(defaultCity)}&tipo=${
-              section === "especialidades" ? "especialidad" : 
-              section === "ciudades" ? "ciudad" : "padecimiento"
-            }&valor=${encodeURIComponent(item)}`}
+            href={getLinkHref(item, section)}
             className="text-sm hover:text-primary transition-colors p-2 rounded-md hover:bg-accent"
           >
             {item}
@@ -3661,12 +3657,22 @@ export default function FeaturedSections() {
     )
   }
 
+  const getLinkHref = (item: string, section: string) => {
+    // Special case for cities - show all doctors in that city
+    if (section === "ciudades") {
+      return `/buscar?ciudad=${encodeURIComponent(item)}&tipo=ciudad&valor=${encodeURIComponent(item)}`
+    }
+    
+    // For specialties and conditions - search across all cities
+    return `/buscar?tipo=${section === "especialidades" ? "especialidad" : "padecimiento"}&valor=${encodeURIComponent(item)}`
+  }
   return (
     <div className="space-y-8">
+      {/* Cards remain the same */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-xl">Especialidades</CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => toggleSection("especialidades")} className="h-8 px-2">
+          <Button variant="ghost" size="sm" onClick={() => toggleSection("especialidades")}>
             {expandedSections.especialidades ? (
               <>
                 <span className="mr-1">Ver menos</span>
@@ -3688,7 +3694,7 @@ export default function FeaturedSections() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-xl">Ciudades</CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => toggleSection("ciudades")} className="h-8 px-2">
+          <Button variant="ghost" size="sm" onClick={() => toggleSection("ciudades")}>
             {expandedSections.ciudades ? (
               <>
                 <span className="mr-1">Ver menos</span>
@@ -3702,13 +3708,15 @@ export default function FeaturedSections() {
             )}
           </Button>
         </CardHeader>
-        <CardContent>{renderItems(FEATURED_DATA.ciudades, "ciudades", expandedSections.ciudades)}</CardContent>
+        <CardContent>
+          {renderItems(FEATURED_DATA.ciudades, "ciudades", expandedSections.ciudades)}
+        </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-xl">Padecimientos Atendidos</CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => toggleSection("padecimientos")} className="h-8 px-2">
+          <Button variant="ghost" size="sm" onClick={() => toggleSection("padecimientos")}>
             {expandedSections.padecimientos ? (
               <>
                 <span className="mr-1">Ver menos</span>
@@ -3728,4 +3736,5 @@ export default function FeaturedSections() {
       </Card>
     </div>
   )
+}
 }
