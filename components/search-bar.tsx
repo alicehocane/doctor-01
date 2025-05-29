@@ -138,3 +138,4 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     </div>
   </div>
 )
+}
