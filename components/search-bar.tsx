@@ -1,44 +1,63 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter } from "next/navigation"
 import { trackSearch } from "@/lib/search-tracker"
+import { db } from "@/lib/firebase"
+import { collection, getDocs, query, where } from "firebase/firestore"
 
-interface SearchBarProps {
-  className?: string
-}
-
-export default function SearchBar({ className = "" }: SearchBarProps) {
+export default function SearchBar() {
   const router = useRouter()
-  const [selectedCity, setSelectedCity] = useState<string>("")
+  const [cities, setCities] = useState<string[]>([])
+  const [selectedCity, setSelectedCity] = useState("")
   const [searchBy, setSearchBy] = useState<"especialidad" | "padecimiento">("especialidad")
-  const [searchValue, setSearchValue] = useState<string>("")
+  const [searchValue, setSearchValue] = useState("")
+  const [options, setOptions] = useState<string[]>([])
   const [isSearching, setIsSearching] = useState(false)
 
-  // Hardcoded values as requested
-  const ciudades = ["Ciudad de México", "Monterrey", "Guadalajara"]
-  const allEspecialidades = [
-    "Acupuntor",
-    "Alergología",
-    "Alergólogo",
-    "Algólogo",
-    "Anatomopatólogo",
-    "Anatomía patológica",
-    "Cardiólogo",
-    "Angiólogo"
-  ]
-  const allPadecimientos = [
-    "Abdomen agudo",
-    "Abetalipoproteinemia",
-    "Ablación de la placenta",
-    "Arritmias",
-    "Hipertensión",
-    "Insuficiencia cardíaca",
-    "Fibrilación auricular"
-  ]
+  // Step 1: Load all cities dynamically
+  useEffect(() => {
+    const fetchCities = async () => {
+      const doctorSnap = await getDocs(collection(db, "doctors"))
+      const uniqueCities = new Set<string>()
+      doctorSnap.forEach(doc => {
+        const data = doc.data()
+        if (Array.isArray(data.cities)) {
+          data.cities.forEach((city: string) => uniqueCities.add(city))
+        }
+      })
+      setCities(Array.from(uniqueCities).sort())
+    }
+
+    fetchCities()
+  }, [])
+
+  // Step 2: Load specialties or diseases based on city
+  useEffect(() => {
+    const fetchOptions = async () => {
+      if (!selectedCity) return
+
+      const q = query(collection(db, "doctors"), where("cities", "array-contains", selectedCity))
+      const doctorSnap = await getDocs(q)
+
+      const items = new Set<string>()
+      doctorSnap.forEach(doc => {
+        const data = doc.data()
+        if (searchBy === "especialidad" && Array.isArray(data.specialties)) {
+          data.specialties.forEach((sp: string) => items.add(sp))
+        }
+        if (searchBy === "padecimiento" && Array.isArray(data.diseasesTreated)) {
+          data.diseasesTreated.forEach((ds: string) => items.add(ds))
+        }
+      })
+      setOptions(Array.from(items).sort())
+    }
+
+    fetchOptions()
+  }, [selectedCity, searchBy])
 
   const handleSearch = async () => {
     if (selectedCity && searchValue) {
@@ -55,49 +74,36 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   }
 
   return (
-    <div className={`bg-card rounded-lg shadow-sm p-4 ${className}`}>
-      <div className={`flex gap-3 items-end ${
-    selectedCity ? 'flex-col md:flex-row' : 'justify-center'
-  }`}>
-        {/* First Dropdown - City (Required) */}
+    <div className="bg-card rounded-lg shadow-sm p-4">
+      <div className={`flex gap-3 items-end ${selectedCity ? "flex-col md:flex-row" : "justify-center"}`}>
+        
+        {/* First Dropdown - City */}
         <div className="w-full md:w-1/3">
-          <label htmlFor="city" className="block text-sm font-medium mb-1">
-            Buscar en (Search in)
-          </label>
-          <Select 
-            value={selectedCity} 
-            onValueChange={(value) => {
-              setSelectedCity(value)
-              setSearchValue("") // Reset search value when city changes
-            }}
-          >
-            <SelectTrigger id="city" className="w-full">
+          <label className="block text-sm font-medium mb-1">Buscar en (Search in)</label>
+          <Select value={selectedCity} onValueChange={(value) => {
+            setSelectedCity(value)
+            setSearchValue("")
+          }}>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Selecciona una ciudad" />
             </SelectTrigger>
             <SelectContent>
-              {ciudades.map((city) => (
-                <SelectItem key={city} value={city}>
-                  {city}
-                </SelectItem>
+              {cities.map(city => (
+                <SelectItem key={city} value={city}>{city}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Second Dropdown - Search by (Required, only shown if city is selected) */}
+        {/* Second Dropdown - Search By */}
         {selectedCity && (
           <div className="w-full md:w-1/3">
-            <label htmlFor="search-by" className="block text-sm font-medium mb-1">
-              Buscar por (Search by)
-            </label>
-            <Select 
-              value={searchBy} 
-              onValueChange={(value: "especialidad" | "padecimiento") => {
-                setSearchBy(value)
-                setSearchValue("") // Reset search value when search type changes
-              }}
-            >
-              <SelectTrigger id="search-by" className="w-full">
+            <label className="block text-sm font-medium mb-1">Buscar por (Search by)</label>
+            <Select value={searchBy} onValueChange={(value) => {
+              setSearchBy(value as "especialidad" | "padecimiento")
+              setSearchValue("")
+            }}>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecciona tipo de búsqueda" />
               </SelectTrigger>
               <SelectContent>
@@ -108,30 +114,28 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         )}
 
-        {/* Third Dropdown - Dynamic options based on previous selections */}
-        {selectedCity && searchBy && (
+        {/* Third Dropdown - Specialty or Disease */}
+        {selectedCity && options.length > 0 && (
           <div className="w-full md:w-1/3">
-            <label htmlFor="search-value" className="block text-sm font-medium mb-1">
+            <label className="block text-sm font-medium mb-1">
               {searchBy === "especialidad" ? "Especialidad" : "Padecimiento"}
             </label>
             <Select value={searchValue} onValueChange={setSearchValue}>
-              <SelectTrigger id="search-value" className="w-full">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder={`Selecciona ${searchBy}`} />
               </SelectTrigger>
               <SelectContent className="max-h-[300px] overflow-y-auto">
-                {(searchBy === "especialidad" ? allEspecialidades : allPadecimientos).map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
+                {options.map(opt => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         )}
 
-        <Button 
-          onClick={handleSearch} 
-          className="w-full md:w-auto" 
+        <Button
+          onClick={handleSearch}
+          className="w-full md:w-auto"
           disabled={!selectedCity || !searchValue || isSearching}
         >
           <Search className="h-4 w-4 mr-2" />
