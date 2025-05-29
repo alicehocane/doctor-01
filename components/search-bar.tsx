@@ -3694,7 +3694,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   return (
     // Center the bar on desktop and limit its width
     <div
-      className={`bg-card rounded-lg shadow-sm p-4 mx-auto max-w-4xl ${className}`}
+      className={`bg-card rounded-lg shadow-sm p-4 mx-auto max-w-6xl ${className}`}
     >
       {/* 
         mobile: stack each control full-width (flex-col + items-stretch)
