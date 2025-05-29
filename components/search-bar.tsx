@@ -18,26 +18,15 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   const [searchValue, setSearchValue] = useState<string>("")
   const [isSearching, setIsSearching] = useState(false)
 
-  // Hardcoded values as requested
+  // Hardcoded values
   const ciudades = ["Ciudad de México", "Monterrey", "Guadalajara"]
   const allEspecialidades = [
-    "Acupuntor",
-    "Alergología",
-    "Alergólogo",
-    "Algólogo",
-    "Anatomopatólogo",
-    "Anatomía patológica",
-    "Cardiólogo",
-    "Angiólogo"
+    "Acupuntor", "Alergología", "Alergólogo", "Algólogo", 
+    "Anatomopatólogo", "Anatomía patológica", "Cardiólogo", "Angiólogo"
   ]
   const allPadecimientos = [
-    "Abdomen agudo",
-    "Abetalipoproteinemia",
-    "Ablación de la placenta",
-    "Arritmias",
-    "Hipertensión",
-    "Insuficiencia cardíaca",
-    "Fibrilación auricular"
+    "Abdomen agudo", "Abetalipoproteinemia", "Ablación de la placenta",
+    "Arritmias", "Hipertensión", "Insuficiencia cardíaca", "Fibrilación auricular"
   ]
 
   const handleSearch = async () => {
@@ -56,11 +45,11 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
 
   return (
     <div className={`bg-card rounded-lg shadow-sm p-4 ${className}`}>
-      <div className={`flex gap-3 items-end ${
-    selectedCity ? 'flex-col md:flex-row' : 'justify-center'
-  }`}>
-        {/* First Dropdown - City (Required) */}
-        <div className="w-full md:w-1/3">
+      <div className={`flex flex-col md:flex-row gap-3 ${selectedCity ? 'items-end' : 'items-center'}`}>
+        {/* First Dropdown - City */}
+        <div className={`w-full transition-all duration-200 ${
+          selectedCity ? 'md:w-1/3' : 'md:w-full md:max-w-md mx-auto text-center'
+        }`}>
           <label htmlFor="city" className="block text-sm font-medium mb-1">
             Buscar en (Search in)
           </label>
@@ -68,10 +57,10 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
             value={selectedCity} 
             onValueChange={(value) => {
               setSelectedCity(value)
-              setSearchValue("") // Reset search value when city changes
+              setSearchValue("")
             }}
           >
-            <SelectTrigger id="city" className="w-full">
+            <SelectTrigger id="city" className={`w-full ${!selectedCity ? 'md:max-w-xs mx-auto' : ''}`}>
               <SelectValue placeholder="Selecciona una ciudad" />
             </SelectTrigger>
             <SelectContent>
@@ -84,9 +73,9 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </Select>
         </div>
 
-        {/* Second Dropdown - Search by (Required, only shown if city is selected) */}
+        {/* Second Dropdown - Search by */}
         {selectedCity && (
-          <div className="w-full md:w-1/3">
+          <div className="w-full md:w-1/3 transition-all duration-200">
             <label htmlFor="search-by" className="block text-sm font-medium mb-1">
               Buscar por (Search by)
             </label>
@@ -94,7 +83,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               value={searchBy} 
               onValueChange={(value: "especialidad" | "padecimiento") => {
                 setSearchBy(value)
-                setSearchValue("") // Reset search value when search type changes
+                setSearchValue("")
               }}
             >
               <SelectTrigger id="search-by" className="w-full">
@@ -108,9 +97,9 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         )}
 
-        {/* Third Dropdown - Dynamic options based on previous selections */}
+        {/* Third Dropdown - Specialties/Diseases */}
         {selectedCity && searchBy && (
-          <div className="w-full md:w-1/3">
+          <div className="w-full md:w-1/3 transition-all duration-200">
             <label htmlFor="search-value" className="block text-sm font-medium mb-1">
               {searchBy === "especialidad" ? "Especialidad" : "Padecimiento"}
             </label>
@@ -129,9 +118,12 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         )}
 
+        {/* Search Button */}
         <Button 
           onClick={handleSearch} 
-          className="w-full md:w-auto" 
+          className={`w-full transition-all duration-200 ${
+            selectedCity && searchBy ? 'md:w-auto' : 'md:w-full md:max-w-xs'
+          }`} 
           disabled={!selectedCity || !searchValue || isSearching}
         >
           <Search className="h-4 w-4 mr-2" />
