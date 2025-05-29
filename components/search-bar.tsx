@@ -1,79 +1,51 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter } from "next/navigation"
 import { trackSearch } from "@/lib/search-tracker"
-import { db } from "@/lib/firebase"
-import { collection, getDocs, query, where } from "firebase/firestore"
 
+interface SearchBarProps {
+  className?: string
+}
 
-export default function SearchBar() {
+export default function SearchBar({ className = "" }: SearchBarProps) {
   const router = useRouter()
-  const [cities, setCities] = useState<string[]>([]); // Replace `ciudades`
-  const [selectedCity, setSelectedCity] = useState("")
+  const [selectedCity, setSelectedCity] = useState<string>("")
   const [searchBy, setSearchBy] = useState<"especialidad" | "padecimiento">("especialidad")
-  const [searchValue, setSearchValue] = useState("")
-  const [options, setOptions] = useState<string[]>([])
+  const [searchValue, setSearchValue] = useState<string>("")
   const [isSearching, setIsSearching] = useState(false)
 
-  // Step 1: Load all cities dynamically
-  useEffect(() => {
-  const fetchCities = async () => {
-    try {
-      const snapshot = await getDocs(collection(db, "doctors"));
-      console.log("Fetched doctor docs:", snapshot.docs.map((d) => d.data()))
-
-      const uniqueCities = new Set<string>();
-
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (Array.isArray(data.cities)) {
-          data.cities.forEach(city => uniqueCities.add(city));
-        }
-      });
-
-      setCities(Array.from(uniqueCities).sort());
-    } catch (error) {
-      console.error("Failed to fetch cities from Firestore:", error);
-    }
-  };
-
-  fetchCities();
-}, []);
-
-  // Step 2: Load specialties or diseases based on city
-  useEffect(() => {
-    const fetchOptions = async () => {
-      if (!selectedCity) return
-
-      const q = query(collection(db, "doctors"), where("cities", "array-contains", selectedCity))
-      const doctorSnap = await getDocs(q)
-
-      const items = new Set<string>()
-      doctorSnap.forEach(doc => {
-        const data = doc.data()
-        if (searchBy === "especialidad" && Array.isArray(data.specialties)) {
-          data.specialties.forEach((sp: string) => items.add(sp))
-        }
-        if (searchBy === "padecimiento" && Array.isArray(data.diseasesTreated)) {
-          data.diseasesTreated.forEach((ds: string) => items.add(ds))
-        }
-      })
-      setOptions(Array.from(items).sort())
-    }
-
-    fetchOptions()
-  }, [selectedCity, searchBy])
+  // Hardcoded values as requested
+  const ciudades = ["Ciudad de México", "Monterrey", "Guadalajara"]
+  const allEspecialidades = [
+    "Acupuntor",
+    "Alergología",
+    "Alergólogo",
+    "Algólogo",
+    "Anatomopatólogo",
+    "Anatomía patológica",
+    "Cardiólogo",
+    "Angiólogo"
+  ]
+  const allPadecimientos = [
+    "Abdomen agudo",
+    "Abetalipoproteinemia",
+    "Ablación de la placenta",
+    "Arritmias",
+    "Hipertensión",
+    "Insuficiencia cardíaca",
+    "Fibrilación auricular"
+  ]
 
   const handleSearch = async () => {
     if (selectedCity && searchValue) {
       setIsSearching(true)
       try {
         await trackSearch(searchBy, searchValue)
-        router.push(`/buscar?ciudad=${selectedCity}&tipo=${searchBy}&valor=${searchValue}`)
+        router.push(/buscar?ciudad=${selectedCity}&tipo=${searchBy}&valor=${searchValue})
       } catch (error) {
         console.error("Error tracking search:", error)
       } finally {
@@ -83,38 +55,49 @@ export default function SearchBar() {
   }
 
   return (
-    <div className="bg-card rounded-lg shadow-sm p-4">
-      <div className={`flex gap-3 items-end ${selectedCity ? "flex-col md:flex-row" : "justify-center"}`}>
-        
-        {/* First Dropdown - City */}
+    <div className={bg-card rounded-lg shadow-sm p-4 ${className}}>
+      <div className={flex gap-3 items-end ${
+    selectedCity ? 'flex-col md:flex-row' : 'justify-center'
+  }}>
+        {/* First Dropdown - City (Required) */}
         <div className="w-full md:w-1/3">
-          <label className="block text-sm font-medium mb-1">Buscar en (Search in)</label>
-          <Select value={selectedCity} onValueChange={(value) => {
-            setSelectedCity(value)
-            setSearchValue("")
-          }}>
-            <SelectTrigger className="w-full">
+          <label htmlFor="city" className="block text-sm font-medium mb-1">
+            Buscar en (Search in)
+          </label>
+          <Select 
+            value={selectedCity} 
+            onValueChange={(value) => {
+              setSelectedCity(value)
+              setSearchValue("") // Reset search value when city changes
+            }}
+          >
+            <SelectTrigger id="city" className="w-full">
               <SelectValue placeholder="Selecciona una ciudad" />
             </SelectTrigger>
             <SelectContent>
-              {cities.map((city) => (
-  <SelectItem key={city} value={city}>
-    {city}
-  </SelectItem>
-))}
+              {ciudades.map((city) => (
+                <SelectItem key={city} value={city}>
+                  {city}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Second Dropdown - Search By */}
+        {/* Second Dropdown - Search by (Required, only shown if city is selected) */}
         {selectedCity && (
           <div className="w-full md:w-1/3">
-            <label className="block text-sm font-medium mb-1">Buscar por (Search by)</label>
-            <Select value={searchBy} onValueChange={(value) => {
-              setSearchBy(value as "especialidad" | "padecimiento")
-              setSearchValue("")
-            }}>
-              <SelectTrigger className="w-full">
+            <label htmlFor="search-by" className="block text-sm font-medium mb-1">
+              Buscar por (Search by)
+            </label>
+            <Select 
+              value={searchBy} 
+              onValueChange={(value: "especialidad" | "padecimiento") => {
+                setSearchBy(value)
+                setSearchValue("") // Reset search value when search type changes
+              }}
+            >
+              <SelectTrigger id="search-by" className="w-full">
                 <SelectValue placeholder="Selecciona tipo de búsqueda" />
               </SelectTrigger>
               <SelectContent>
@@ -125,28 +108,30 @@ export default function SearchBar() {
           </div>
         )}
 
-        {/* Third Dropdown - Specialty or Disease */}
-        {selectedCity && options.length > 0 && (
+        {/* Third Dropdown - Dynamic options based on previous selections */}
+        {selectedCity && searchBy && (
           <div className="w-full md:w-1/3">
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor="search-value" className="block text-sm font-medium mb-1">
               {searchBy === "especialidad" ? "Especialidad" : "Padecimiento"}
             </label>
             <Select value={searchValue} onValueChange={setSearchValue}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={`Selecciona ${searchBy}`} />
+              <SelectTrigger id="search-value" className="w-full">
+                <SelectValue placeholder={Selecciona ${searchBy}} />
               </SelectTrigger>
               <SelectContent className="max-h-[300px] overflow-y-auto">
-                {options.map(opt => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                {(searchBy === "especialidad" ? allEspecialidades : allPadecimientos).map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         )}
 
-        <Button
-          onClick={handleSearch}
-          className="w-full md:w-auto"
+        <Button 
+          onClick={handleSearch} 
+          className="w-full md:w-auto" 
           disabled={!selectedCity || !searchValue || isSearching}
         >
           <Search className="h-4 w-4 mr-2" />
