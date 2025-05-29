@@ -56,7 +56,9 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
 
   return (
     <div className={`bg-card rounded-lg shadow-sm p-4 ${className}`}>
-      <div className="flex flex-col md:flex-row gap-3 items-end">
+      <div className={`flex gap-3 items-end ${
+    selectedCity ? 'flex-col md:flex-row' : 'justify-center'
+  }`}>
         {/* First Dropdown - City (Required) */}
         <div className="w-full md:w-1/3">
           <label htmlFor="city" className="block text-sm font-medium mb-1">
