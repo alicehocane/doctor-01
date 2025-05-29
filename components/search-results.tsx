@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import DoctorCard from "@/components/doctor-card"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -19,11 +19,6 @@ import {
 import { db } from "@/lib/firebase"
 import SearchResultsSkeleton from "@/components/search-results-skeleton"
 
-interface SearchResultsProps {
-  tipo: string
-  valor: string
-}
-
 // Cache object outside the component
 let doctorsCache: {
   [key: string]: {
@@ -34,8 +29,12 @@ let doctorsCache: {
 } = {}
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000 // 1 week in milliseconds
 
-
-export default function SearchResults({ tipo, valor }: SearchResultsProps) {
+export default function SearchResults() {
+  const searchParams = useSearchParams()
+  const ciudad = searchParams.get('ciudad')
+  const tipo = searchParams.get('tipo')
+  const valor = searchParams.get('valor')
+  
   const router = useRouter()
   const [doctors, setDoctors] = useState<DocumentData[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,45 +45,50 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
 
   // Create a unique cache key based on search parameters and page
   const getCacheKey = useCallback(() => {
-    return `${tipo}-${valor}-${currentPage}`
-  }, [tipo, valor, currentPage])
+    return `${ciudad}-${tipo}-${valor}-${currentPage}`
+  }, [ciudad, tipo, valor, currentPage])
 
   // Enhanced priority scoring function
   const calculatePriorityScore = useCallback((doctor: DocumentData) => {
-    let score = 0;
+    if (!tipo || !valor) return 0;
     
-    // Highest priority: has diseases treated (regardless of match)
-    if (doctor.diseasesTreated?.length > 0) {
-      score += 100; // Base score for having any diseases treated
-      
-      // Additional points for matching diseases
-      if (doctor.diseasesTreated.some((d: string) => 
-        d.toLowerCase().includes(valor.toLowerCase()))) {
-        score += 50; // Extra points for matching diseases
-      }
+    let score = 0;
+    const searchValLower = valor.toLowerCase();
+    
+    // Highest priority: exact matches
+    if (tipo === "especialidad" && doctor.specialties?.some((s: string) => 
+      s.toLowerCase() === searchValLower)) {
+      score += 100;
+    } 
+    else if (tipo === "padecimiento" && doctor.diseasesTreated?.some((d: string) => 
+      d.toLowerCase() === searchValLower)) {
+      score += 100;
+    }
+    // Partial matches
+    else if (tipo === "especialidad" && doctor.specialties?.some((s: string) => 
+      s.toLowerCase().includes(searchValLower))) {
+      score += 50;
+    }
+    else if (tipo === "padecimiento" && doctor.diseasesTreated?.some((d: string) => 
+      d.toLowerCase().includes(searchValLower))) {
+      score += 50;
     }
     
-    // Specialty matches
-    if (doctor.specialties?.some((s: string) => 
-      s.toLowerCase().includes(valor.toLowerCase()))) {
+    // City match bonus (regardless of search type)
+    if (ciudad && doctor.cities?.some((c: string) => 
+      c.toLowerCase() === ciudad.toLowerCase())) {
       score += 30;
     }
     
-    // City matches
-    if (doctor.cities?.some((c: string) => 
-      c.toLowerCase().includes(valor.toLowerCase()))) {
-      score += 20;
-    }
-    
-    // Phone number matches
-    if (doctor.phoneNumbers?.some((p: string) => p.includes(valor))) {
-      score += 10;
-    }
-    
     return score;
-  }, [valor]);
+  }, [tipo, valor, ciudad]);
 
   const fetchDoctors = useCallback(async () => {
+    if (!ciudad || !tipo || !valor) {
+      setLoading(false);
+      return;
+    }
+
     const cacheKey = getCacheKey()
     const cachedData = doctorsCache[cacheKey]
 
@@ -99,18 +103,20 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
     setLoading(true)
     try {
       const doctorsRef = collection(db, "doctors")
-      let q
+      let q = query(doctorsRef)
 
-      // Create base query based on search type
-      if (tipo === "ciudad") {
-        q = query(doctorsRef, where("cities", "array-contains", valor))
-      } else if (tipo === "especialidad") {
-        q = query(doctorsRef, where("specialties", "array-contains", valor))
-      } else if (tipo === "padecimiento") {
-        q = query(doctorsRef, where("diseasesTreated", "array-contains", valor))
-      } else {
-        // General search across multiple fields
-        q = query(doctorsRef)
+      // First filter by city if specified
+      if (ciudad) {
+        q = query(q, where("cities", "array-contains", ciudad))
+      }
+
+      // Then filter by search type if specified
+      if (tipo && valor) {
+        if (tipo === "especialidad") {
+          q = query(q, where("specialties", "array-contains", valor))
+        } else if (tipo === "padecimiento") {
+          q = query(q, where("diseasesTreated", "array-contains", valor))
+        }
       }
 
       const querySnapshot = await getDocs(q)
@@ -156,37 +162,24 @@ export default function SearchResults({ tipo, valor }: SearchResultsProps) {
     } catch (error) {
       console.error("Error fetching doctors:", error)
       // Fallback to mock data
-      const mockDoctors = getMockDoctors(tipo, valor)
+      const mockDoctors = getMockDoctors()
       setDoctors(mockDoctors)
       setTotalDoctors(mockDoctors.length)
     } finally {
       setLoading(false)
     }
-  }, [tipo, valor, currentPage, calculatePriorityScore, getCacheKey])
+  }, [ciudad, tipo, valor, currentPage, calculatePriorityScore, getCacheKey])
 
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [ciudad, tipo, valor])
 
- useEffect(() => {
-  setCurrentPage(1)
-}, [tipo, valor])
-
-useEffect(() => {
-  fetchDoctors()
-}, [fetchDoctors])
-
-// // 1) Reset to first page whenever the search changes
-//   useEffect(() => {
-//     setCurrentPage(1)
-//     // (optionally) clear out lastVisible if you’re using Firestore cursors:
-//     setLastVisible(null)
-//   }, [tipo, valor])
-
-//   // 2) Fetch doctors whenever tipo, valor, or currentPage change
-//   useEffect(() => {
-//     fetchDoctors()
-//   }, [fetchDoctors])
+  useEffect(() => {
+    fetchDoctors()
+  }, [fetchDoctors])
 
   // Helper function for mock data
-  const getMockDoctors = (searchType: string, searchValue: string) => {
+  const getMockDoctors = () => {
     const allMockDoctors = [
       {
         id: "WDONFz7u8gQm5Sslxd43",
@@ -221,19 +214,23 @@ useEffect(() => {
       }
     ]
 
-    // Filter mock data based on search type and value
+    // Filter mock data based on search parameters
     return allMockDoctors.filter(doctor => {
-      if (!searchType) return true
-      
-      const searchValLower = searchValue.toLowerCase()
-      
-      if (searchType === "ciudad") {
-        return doctor.cities?.some(c => c.toLowerCase().includes(searchValLower))
-      } else if (searchType === "especialidad") {
-        return doctor.specialties?.some(s => s.toLowerCase().includes(searchValLower))
-      } else if (searchType === "padecimiento") {
-        return doctor.diseasesTreated?.some(d => d.toLowerCase().includes(searchValLower))
+      // Filter by city if specified
+      if (ciudad && !doctor.cities?.some(c => c.toLowerCase() === ciudad.toLowerCase())) {
+        return false
       }
+      
+      // Filter by search type if specified
+      if (tipo && valor) {
+        const searchValLower = valor.toLowerCase()
+        if (tipo === "especialidad") {
+          return doctor.specialties?.some(s => s.toLowerCase().includes(searchValLower))
+        } else if (tipo === "padecimiento") {
+          return doctor.diseasesTreated?.some(d => d.toLowerCase().includes(searchValLower))
+        }
+      }
+      
       return true
     })
   }
@@ -246,10 +243,20 @@ useEffect(() => {
     return <SearchResultsSkeleton />
   }
 
+  if (!ciudad || !tipo || !valor) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Por favor completa todos los campos de búsqueda.</p>
+      </div>
+    )
+  }
+
   if (doctors.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">No se encontraron médicos que coincidan con tu búsqueda.</p>
+        <p className="text-muted-foreground">
+          No se encontraron médicos en {ciudad} que coincidan con tu búsqueda de {tipo === "especialidad" ? "especialidad" : "padecimiento"}: {valor}
+        </p>
       </div>
     )
   }
@@ -258,9 +265,23 @@ useEffect(() => {
 
   return (
     <div>
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold">
+          Resultados en {ciudad} para {tipo === "especialidad" ? "especialidad" : "padecimiento"}: {valor}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {totalDoctors} {totalDoctors === 1 ? 'médico encontrado' : 'médicos encontrados'}
+        </p>
+      </div>
+
       <div className="space-y-4">
         {doctors.map((doctor) => (
-          <DoctorCard key={doctor.id} doctor={doctor} searchType={tipo} searchValue={valor} />
+          <DoctorCard 
+            key={doctor.id} 
+            doctor={doctor} 
+            highlightField={tipo === "especialidad" ? "specialties" : "diseasesTreated"}
+            highlightValue={valor}
+          />
         ))}
       </div>
 
