@@ -47,11 +47,8 @@ export default function SearchResults({
   const calculatePriorityScore = useCallback(
     (doc: DocumentData) => {
       let score = 0
-
-      // Base: treats any disease
-      if (Array.isArray(doc.diseasesTreated)) {
+      if (Array.isArray(doc.diseasesTreated) && doc.diseasesTreated.length > 0) {
         score += 100
-        // Bonus if treating the searched disease
         if (
           doc.diseasesTreated.some((d: string) =>
             d.toLowerCase().includes(valor.toLowerCase())
@@ -60,8 +57,6 @@ export default function SearchResults({
           score += 50
         }
       }
-
-      // Bonus if specialty matches the search value
       if (
         Array.isArray(doc.specialties) &&
         doc.specialties.some((s: string) =>
@@ -70,8 +65,6 @@ export default function SearchResults({
       ) {
         score += 30
       }
-
-      // Bonus if city matches the search value (when valor is a city)
       if (
         Array.isArray(doc.cities) &&
         doc.cities.some((c: string) =>
@@ -80,17 +73,12 @@ export default function SearchResults({
       ) {
         score += 20
       }
-
-      // Minor bonus if phone number contains the search term
       if (
         Array.isArray(doc.phoneNumbers) &&
-        doc.phoneNumbers.some((p: string) =>
-          p.includes(valor)
-        )
+        doc.phoneNumbers.some((p: string) => p.includes(valor))
       ) {
         score += 10
       }
-
       return score
     },
     [valor]
@@ -99,7 +87,6 @@ export default function SearchResults({
   const fetchDoctors = useCallback(async () => {
     const cacheKey = getCacheKey()
     const cached = doctorsCache[cacheKey]
-
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
       setDoctors(cached.doctors)
       setTotalDoctors(cached.totalDoctors)
@@ -114,10 +101,7 @@ export default function SearchResults({
       // 1) Firestore query with only one array-contains
       let baseQuery
       if (tipo === "ciudad") {
-        baseQuery = query(
-          doctorsRef,
-          where("cities", "array-contains", valor)
-        )
+        baseQuery = query(doctorsRef, where("cities", "array-contains", valor))
       } else if (tipo === "especialidad") {
         baseQuery = query(
           doctorsRef,
@@ -131,41 +115,43 @@ export default function SearchResults({
       }
 
       const snap = await getDocs(baseQuery)
-      let allDocs = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      }))
 
-      // 2) Client‐side filter by ciudad if needed
+      // 2) Map docs & compute score
+      let docsWithScore = snap.docs.map((d) => {
+        const data = d.data()
+        return {
+          id: d.id,
+          ...data,
+          priorityScore: calculatePriorityScore(data),
+        }
+      })
+
+      // 3) Filter by ciudad client-side if needed
       if (ciudad && tipo !== "ciudad") {
-        allDocs = allDocs.filter(
-          (doc) =>
-            Array.isArray(doc.cities) && doc.cities.includes(ciudad)
+        docsWithScore = docsWithScore.filter((doc) =>
+          Array.isArray(doc.cities) && doc.cities.includes(ciudad)
         )
       }
 
-      // 3) Score, sort, paginate
-      const scored = allDocs.map((doc) => ({
-        ...doc,
-        priorityScore: calculatePriorityScore(doc),
-      }))
-
-      const sorted = scored.sort((a, b) =>
+      // 4) Sort by score, then fullName
+      docsWithScore.sort((a, b) =>
         b.priorityScore - a.priorityScore ||
         (a.fullName || "").localeCompare(b.fullName || "")
       )
 
+      // 5) Paginate
+      const total = docsWithScore.length
+      setTotalDoctors(total)
       const start = (currentPage - 1) * ITEMS_PER_PAGE
-      const pageDocs = sorted.slice(start, start + ITEMS_PER_PAGE)
+      const pageDocs = docsWithScore.slice(start, start + ITEMS_PER_PAGE)
 
-      // 4) Cache & set state
+      // 6) Cache & set state
       doctorsCache[cacheKey] = {
         doctors: pageDocs,
-        totalDoctors: sorted.length,
+        totalDoctors: total,
         timestamp: Date.now(),
       }
       setDoctors(pageDocs)
-      setTotalDoctors(sorted.length)
     } catch (err) {
       console.error("Error fetching doctors:", err)
       setDoctors([])
