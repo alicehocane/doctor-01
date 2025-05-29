@@ -3692,10 +3692,16 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
 
   
   return (
-    <div className={`bg-card rounded-lg shadow-sm p-4 ${className}`}>
-      {/* On mobile: stack each control in its own row; on md+: inline */}
-      <div className="flex flex-col gap-3 items-end md:flex-row md:gap-3 md:items-end">
-        {/* City selector */}
+    // Center the bar on desktop and limit its width
+    <div
+      className={`bg-card rounded-lg shadow-sm p-4 mx-auto max-w-4xl ${className}`}
+    >
+      {/* 
+        mobile: stack each control full-width (flex-col + items-stretch)
+        desktop (md+): inline row, centered (justify-center + items-end)
+      */}
+      <div className="flex flex-col gap-3 items-stretch md:flex-row md:justify-center md:items-end">
+        {/* City */}
         <div className="w-full md:w-1/3">
           <label htmlFor="city" className="block text-sm font-medium mb-1">
             Buscar en
@@ -3720,7 +3726,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </Select>
         </div>
 
-        {/* Search-by selector */}
+        {/* Search by */}
         {selectedCity && (
           <div className="w-full md:w-1/3">
             <label htmlFor="search-by" className="block text-sm font-medium mb-1">
@@ -3744,7 +3750,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         )}
 
-        {/* Value + “Ver más” pagination */}
+        {/* Value + “Ver más” */}
         {selectedCity && (
           <div className="w-full md:w-1/3">
             <label htmlFor="search-value" className="block text-sm font-medium mb-1">
@@ -3763,7 +3769,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
 
                 {shouldShowLoadMore(searchBy) && (
                   <div
-                    className="relative flex items-center justify-center p-2 text-primary cursor-pointer hover:bg-accent"
+                    className="flex items-center justify-center p-2 text-primary cursor-pointer hover:bg-accent"
                     onClick={(e) => {
                       e.preventDefault()
                       handleLoadMore(searchBy)
@@ -3778,7 +3784,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         )}
 
-        {/* Search button */}
+        {/* Button */}
         <Button
           onClick={handleSearch}
           className="w-full md:w-auto"
