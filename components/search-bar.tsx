@@ -3690,10 +3690,11 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     }
   }
 
+  
   return (
     <div className={`bg-card rounded-lg shadow-sm p-4 ${className}`}>
-      {/* Stack all controls on mobile, row on md+ */}
-      <div className="flex flex-col md:flex-row gap-3 items-end">
+      {/* On mobile: stack all; on md+: row */}
+      <div className="flex flex-col gap-3 items-end justify-center md:flex-row md:justify-start">
         {/* City selector */}
         <div className="w-full md:w-1/3">
           <label
