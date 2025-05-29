@@ -3666,9 +3666,9 @@ export default function FeaturedSections() {
     // For specialties and conditions - search across all cities
     return `/buscar?tipo=${section === "especialidades" ? "especialidad" : "padecimiento"}&valor=${encodeURIComponent(item)}`
   }
+
   return (
     <div className="space-y-8">
-      {/* Cards remain the same */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-xl">Especialidades</CardTitle>
@@ -3736,5 +3736,4 @@ export default function FeaturedSections() {
       </Card>
     </div>
   )
-}
 }
