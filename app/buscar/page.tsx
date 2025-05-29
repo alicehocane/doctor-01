@@ -12,40 +12,28 @@ export const metadata: Metadata = {
 export default function SearchPage({
   searchParams,
 }: {
-  searchParams: { 
-    ciudad?: string
-    tipo?: string
-    valor?: string
-  }
+  searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const ciudad = typeof searchParams.ciudad === "string" ? searchParams.ciudad : ""
   const tipo = typeof searchParams.tipo === "string" ? searchParams.tipo : ""
   const valor = typeof searchParams.valor === "string" ? searchParams.valor : ""
 
   return (
     <MainLayout>
-      {ciudad && tipo && valor ? (
+      {tipo && valor ? (
         <>
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold">
-              Resultados en {ciudad}
-            </h1>
-            <p className="text-muted-foreground">
-              {tipo === "especialidad" 
-                ? `Especialidad: ${valor}`
-                : `Padecimiento: ${valor}`}
-            </p>
-          </div>
+          <h2 className="text-xl font-semibold mb-4">
+            Resultados para{" "}
+            {tipo === "ciudad" ? "Ciudad" : tipo === "especialidad" ? "Especialidad" : "Padecimiento Atendido"}:{" "}
+            <span className="text-primary">{valor}</span>
+          </h2>
 
           <Suspense fallback={<SearchResultsSkeleton />}>
-            <SearchResults ciudad={ciudad} tipo={tipo} valor={valor} />
+            <SearchResults tipo={tipo} valor={valor} />
           </Suspense>
         </>
       ) : (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            Por favor completa todos los campos de búsqueda para ver resultados.
-          </p>
+          <p className="text-muted-foreground">Por favor, selecciona los criterios de búsqueda para ver resultados.</p>
         </div>
       )}
     </MainLayout>
