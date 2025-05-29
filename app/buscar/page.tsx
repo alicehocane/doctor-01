@@ -14,8 +14,9 @@ export default function SearchPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const tipo = typeof searchParams.tipo === "string" ? searchParams.tipo : ""
-  const valor = typeof searchParams.valor === "string" ? searchParams.valor : ""
+  const tipo   = typeof searchParams.tipo   === "string" ? searchParams.tipo   : ""
+  const valor  = typeof searchParams.valor  === "string" ? searchParams.valor  : ""
+  const ciudad = typeof searchParams.ciudad === "string" ? searchParams.ciudad : undefined
 
   return (
     <MainLayout>
@@ -23,17 +24,27 @@ export default function SearchPage({
         <>
           <h2 className="text-xl font-semibold mb-4">
             Resultados para{" "}
-            {tipo === "ciudad" ? "Ciudad" : tipo === "especialidad" ? "Especialidad" : "Padecimiento Atendido"}:{" "}
+            {tipo === "ciudad"
+              ? "Ciudad"
+              : tipo === "especialidad"
+              ? "Especialidad"
+              : "Padecimiento Atendido"
+            }:{" "}
             <span className="text-primary">{valor}</span>
+            {ciudad && tipo !== "ciudad" && (
+              <> en <span className="text-primary">{ciudad}</span></>
+            )}
           </h2>
 
           <Suspense fallback={<SearchResultsSkeleton />}>
-            <SearchResults tipo={tipo} valor={valor} />
+            <SearchResults tipo={tipo} valor={valor} ciudad={ciudad} />
           </Suspense>
         </>
       ) : (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">Por favor, selecciona los criterios de búsqueda para ver resultados.</p>
+          <p className="text-muted-foreground">
+            Por favor, selecciona los criterios de búsqueda para ver resultados.
+          </p>
         </div>
       )}
     </MainLayout>
