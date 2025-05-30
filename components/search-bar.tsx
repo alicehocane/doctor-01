@@ -38,197 +38,99 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
 
   const ciudades = ["Ciudad de México", "Monterrey", "Guadalajara"]
   const allEspecialidades = [
-    "Psicólogo",  // 946
-    "Dentista - Odontólogo",  // 873
-    "Ginecólogo",  // 816
-    "Pediatra",  // 738
-    "Médico general",  // 528
-    "Internista",  // 474
-    "Traumatólogo",  // 400
-    "Cirujano general",  // 384
-    "Ortopedista",  // 377
-    "Oftalmólogo",  // 262
-    "Psiquiatra",  // 220
-    "Cardiólogo",  // 215
-    "Medicina general",  // 210
-    "Dermatólogo",  // 185
-    "Odontología",  // 178
-    "Nutricionista",  // 168
-    "Anestesiólogo",  // 166
-    "Otorrinolaringólogo",  // 154
-    "Neonatólogo",  // 143
-    "Urólogo",  // 142
-    "Nutriólogo clínico",  // 140
-    "Cirujano plástico",  // 137
-    "Laboratorio-análisis clínicos",  // 106
-    "Gastroenterólogo",  // 105
-    "Psicología",  // 101
-    "Ginecología y obstetricia",  // 98
-    "Pediatría",  // 87
-    "Especialista en Obesidad y Delgadez",  // 84
-    "Cirugía general",  // 82
-    "Medicina interna",  // 82
-    "Oftalmología",  // 76
-    "Neurocirujano",  // 75
-    "Endocrinólogo",  // 72
-    "Neumólogo",  // 72
-    "Médico de familia",  // 68
-    "Geriatra",  // 63
-    "Otorrinolaringología",  // 63
-    "Alergólogo",  // 61
-    "Radiólogo",  // 61
-    "Cirujano pediátrico",  // 60
+    "Psicología",  // 946
+    "Odontología",  // 873
+    "Ginecología y Obstetricia",  // 816
+    "Pediatría",  // 738
+    "Medicina General",  // 528
+    "Medicina Interna",  // 474
+    "Ortopedia y Traumatología",  // 400
+    "Oftalmología",  // 262
+    "Psiquiatría",  // 220
+    "Dermatología",  // 185
+    "Nutrición y Dietética",  // 168
+    "Anestesiología",  // 166
+    "Otorrinolaringología",  // 154
+    "Neonatología",  // 143
+    "Urología",  // 142
+    "Medicina Estética y Reconstructiva",  // 137
+    "Laboratorio Clínico",  // 106
+    "Gastroenterología",  // 105
+    "Cirugía General",  // 82
+    "Neurocirugía",  // 75
+    "Neumología",  // 72
+    "Medicina Familiar",  // 68
+    "Geriatría",  // 63
+    "Alergología",  // 61
+    "Radiología y Diagnóstico por Imagen",  // 61
+    "Cirugía Pediátrica",  // 60
     "Reumatólogo",  // 59
-    "Traumatología",  // 59
-    "Nefrólogo",  // 58
-    "Dermatología",  // 56
-    "Neurólogo",  // 56
-    "Oncólogo médico",  // 56
-    "Cirugía plástica",  // 55
-    "Ortopedia",  // 55
-    "estética y reconstructiva",  // 55
-    "Fisioterapeuta",  // 53
-    "Hematólogo",  // 51
-    "Terapeuta complementario",  // 50
-    "Neurología",  // 49
+    "Nefrología",  // 58
+    "Neurología",  // 56
+    "Oncología Médica",  // 56
+    "Fisioterapia",  // 53
+    "Hematología",  // 51
+    "Medicina Integrativa y Complementaria",  // 50
     "Urología",  // 48
-    "Obesidad y delgadez",  // 47
-    "Psicoanalista",  // 45
-    "Nutriología clínica",  // 44
-    "Gastroenterología",  // 40
+    "Endocrinología, Diabetes y Metabolismo",  // 47
     "Cardiología",  // 39
-    "Especialista en Medicina Crítica y Terapia Intensiva",  // 39
-    "Psiquiatría",  // 39
-    "Radiología",  // 39
-    "Especialista en Rehabilitación y Medicina Física",  // 37
-    "Cirujano cardiovascular y torácico",  // 36
-    "Neumología",  // 36
+    "Medicina de Urgencias y Cuidados Intensivos",  // 39
+    "Rehabilitación y Medicina Física",  // 37
     "Reumatología",  // 36
-    "Infectólogo",  // 33
-    "Especialista en Medicina del Deporte",  // 32
-    "Diabetólogo",  // 31
-    "Rehabilitación y medicina física",  // 31
-    "Angiólogo",  // 30
-    "Homeópata",  // 30
-    "Hematología",  // 29
-    "Neurólogo pediatra",  // 29
-    "Endocrinología",  // 28
+    "Infectología",  // 33
+    "Medicina del Deporte",  // 32
+    "Angiología",  // 30
+    "Homeopatía",  // 30
+    "Neurología Pediátrica",  // 29
     "Endoscopia",  // 28
-    "Nutrición",  // 28
-    "Cirujano maxilofacial",  // 27
-    "Oncología médica",  // 27
-    "Alergología",  // 26
-    "Medicina del deporte",  // 26
-    "Angiología y cirugia vascular",  // 25
-    "Médico estético",  // 25
-    "Nefrología",  // 25
-    "Cirujano oncólogo",  // 23
-    "Endoscopista",  // 23
-    "Cirugía pediátrica",  // 22
-    "Geriatría",  // 22
-    "Medicina crítica y terapia intensiva",  // 20
-    "Medicina familiar",  // 20
-    "Podología",  // 20
-    "Anatomía patológica",  // 19
-    "Anestesiología",  // 19
-    "Cirugía estética y cosmética",  // 18
-    "Cirugía maxilofacial",  // 17
-    "Diabetología",  // 17
-    "Fisioterapia",  // 17
+    "Cirugía Maxilofacial",  // 27
+    "Cirugía Vascular y Angiología",  // 25
+    "Patología (Anatómica y Clínica)",  // 19
     "Proctología",  // 17
-    "Psicoanálisis",  // 17
-    "Inmunólogo",  // 16
-    "Medicina complementaria",  // 16
-    "Odontólogo pediatra",  // 16
-    "Neurocirugía",  // 15
-    "Cirujano estético y cosmético",  // 14
-    "Homeopatía",  // 14
-    "Medicina estética",  // 14
-    "Anatomopatólogo",  // 13
-    "Cardiólogo pediátrico",  // 12
-    "Cirujano bariatra",  // 12
-    "Infectología",  // 12
-    "Inmunología",  // 12
-    "Proctólogo",  // 12
-    "Radio Oncólogo",  // 12
-    "Urgencias",  // 12
-    "Acupuntor",  // 11
+    "Inmunología",  // 16
+    "Odontología Pediátrica",  // 16
+    "Cardiología Pediátrica",  // 12
+    "Cirugía Bariátrica",  // 12
+    "Radiooncología",  // 12
+    "Acupuntura",  // 11
     "Audiología",  // 11
-    "Endocrinólogo pediátrico",  // 11
-    "Neumólogo pediatra",  // 11
-    "Podiatra",  // 11
-    "Urgenciólogo",  // 11
+    "Endocrinología Pediátrica",  // 11
+    "Neumología Pediátrica",  // 11
+    "Podología y Podiatría",  // 11
     "otoneurología y foniatría",  // 11
-    "Algólogo",  // 10
+    "Medicina del Dolor y Algología",  // 10
     "Gastroenterólogo pediátrico",  // 10
-    "Neonatología",  // 10
-    "Radioterapeuta",  // 10
-    "Sexólogo",  // 10
-    "Terapia del dolor",  // 10
-    "Medicina del trabajo",  // 9
+    "Sexología",  // 10
+    "Salud Pública y Medicina Preventiva",  // 9
     "Naturopatía",  // 9
-    "Podólogo",  // 9
-    "Cirugía cardiovascular y del tórax",  // 8
-    "Patología clínica",  // 8
+    "Cirugía Cardiotorácica",  // 8
     "Psicopedagogía",  // 8
-    "Audiólogo",  // 7
-    "Cirujano vascular",  // 7
-    "Enfermero",  // 7
     "Enfermería",  // 7
-    "Reumatólogo pediátrico",  // 7
-    // "Cirugía oncológica",  // 6
-    // "Especialista en Medicina del Trabajo",  // 6
-    // "Especialista en Retina Médica y Quirúrgica",  // 6
-    // "Ginecólogo oncológico",  // 6
-    // "Hematólogo pediatra",  // 6
-    // "Medicina integrada",  // 6
-    // "Nefrólogo pediatra",  // 6
-    // "Psiquiatra infantil",  // 6
-    // "Quiropráctica",  // 6
-    // "Especialista en Medicina Integrada",  // 5
-    // "Genetista",  // 5
-    // "Genética",  // 5
-    // "Medicina preventiva",  // 5
-    // "Odontología pediatra",  // 5
-    // "Optometrista",  // 5
-    // "Optometría",  // 5
-    // "Podiatría",  // 5
-    // "Cirugía de la mano",  // 4
-    // "Dermatólogo pediátrico",  // 4
-    // "Oncólogo pediátrico",  // 4
-    // "Ortopedista infantil",  // 4
-    // "Patólogo clínico",  // 4
-    // "Quiropráctico",  // 4
-    // "Sexología",  // 4
-    // "Especialidad en Medicina del Enfermo Pediátrico en Estado Crítico",  // 3
+    "Reumatología Pediátrica",  // 7
+    "Cirugía oncológica",  // 6
+    "Retina Médica y Quirúrgica",  // 6
+    "Ginecología Oncológica",  // 6
+    "Hematología Pediátrica",  // 6
+    "Nefrología Pediátrica",  // 6
+    "Psiquiatría Infantil",  // 6
+    "Quiropráctica",  // 6
+    "Genética",  // 5
+    "Optometría",  // 5
+    "Dermatología Pediátrica",  // 4
+    "Oncología Pediátrica",  // 4
+    "Ortopedia Pediátrica",  // 4
+    "Medicina del Enfermo Pediátrico en Estado Crítico",  // 3
     // "Logopedia",  // 3
-    // "Medicina nuclear",  // 3
-    // "Neurofisiólogo",  // 3
-    // "Oftalmólogo pediátrico",  // 3
+    "Neurofisiología",  // 3
+    "Oftalmología Pediátrica",  // 3
     // "Urólogo pediátrico",  // 3
-    // "Cirujano de la mano",  // 2
-    // "Infectólogo pediatra",  // 2
-    // "Logopeda",  // 2
-    // "Naturista",  // 2
-    // "Neurofisiología",  // 2
-    // "Oftalmología pediátrica",  // 2
-    // "Otorrinolaringología pediátrica",  // 2
-    // "Psicopedagogo",  // 2
-    // "Retina médica y quirúrgica",  // 2
-    // "Terapia ocupacional",  // 2
-    // "Cirujano cardiovascular",  // 1
-    // "Cirujano torácico",  // 1
-    // "Dermatología pediátrica",  // 1
-    // "Gastroenterología pediátrica",  // 1
-    // "Neumología pediátrica",  // 1
-    // "Ortodoncista",  // 1
-    // "Ortopedia pediátrica",  // 1
-    // "Otorrinolaringólogo Pediátrico",  // 1
-    // "Patólogo Bucal",  // 1
-    // "Terapeuta ocupacional",  // 1
-    // "Técnico en diagnóstico e imagen",  // 1
+    "Infectología Pediátrica",  // 2
+    "Otorrinolaringología pediátrica",  // 2
+    "Terapia ocupacional",  // 2
+    "Gastroenterología Pediátrica",  // 1
+    "Ortodoncia",  // 1
+    "Patología Bucal"  // 1
     // "Urología pediátrica",  // 1
-    // "gerontologo",  // 1
   ]
   const allPadecimientos = [
     "Ansiedad",  // 599
