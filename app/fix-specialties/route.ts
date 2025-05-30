@@ -199,38 +199,47 @@ const corrections: Record<string,string> = {
 
 const BATCH_SIZE = 400     // max writes per batch before commit & pause
 const READ_LIMIT = 500       // docs to fetch per page
-const PAUSE_MS   = 200       // pause between commits (ms)
+const PAUSE_MS   = 100      // pause between commits (ms)
 
+/**
+ * Replace each entry in the array via the corrections map,
+ * then remove duplicates while preserving order.
+ */
 function fixArray(arr: string[]): string[] {
-  // replace via corrections map, then dedupe while preserving order
   const mapped = arr.map(v => corrections[v] ?? v)
   return Array.from(new Set(mapped))
 }
 
-async function migrateAll(startAfter?: QueryDocumentSnapshot) {
-  // 1) page through doctors collection
+/**
+ * Recursively page through the collection in chunks of READ_LIMIT.
+ * For each page, update any docs whose `specialties` array changed.
+ */
+async function migratePage(startAfter?: QueryDocumentSnapshot) {
   let q = firestore
-            .collection('doctors')
-            .orderBy('__name__')
-            .limit(READ_LIMIT)
-  if (startAfter) q = q.startAfter(startAfter)
+    .collection('doctors')
+    .orderBy('__name__')
+    .limit(READ_LIMIT)
+
+  if (startAfter) {
+    q = q.startAfter(startAfter)
+  }
 
   const snap = await q.get()
-  if (snap.empty) return
+  if (snap.empty) {
+    return  // all done
+  }
 
-  // 2) batch & throttle updates
   let batch = firestore.batch()
-  let ops   = 0
+  let ops = 0
 
   for (const doc of snap.docs) {
     const data = doc.data()
     if (!Array.isArray(data.specialties)) continue
 
     const fixed = fixArray(data.specialties)
-    const changed = (
+    const changed =
       fixed.length !== data.specialties.length ||
       fixed.some((v, i) => v !== data.specialties[i])
-    )
 
     if (changed) {
       batch.update(doc.ref, { specialties: fixed })
@@ -245,29 +254,28 @@ async function migrateAll(startAfter?: QueryDocumentSnapshot) {
     }
   }
 
-  // commit any leftover writes
   if (ops > 0) {
     await batch.commit()
     await new Promise(r => setTimeout(r, PAUSE_MS))
   }
 
-  // recurse to next page
-  const lastDoc = snap.docs[snap.docs.length - 1]
-  await migrateAll(lastDoc)
+  // Recurse with the last document as cursor
+  await migratePage(snap.docs[snap.docs.length - 1])
 }
 
 export async function GET(request: NextRequest) {
-  // simple token auth
+  // 1) Simple token-based auth
   const token = request.nextUrl.searchParams.get('token')
   if (token !== process.env.MIGRATE_TOKEN) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    await migrateAll()
+    // 2) Kick off the paged migration
+    await migratePage()
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (err: any) {
-    console.error(err)
+    console.error('Migration error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
