@@ -1,6 +1,7 @@
 // app/fix-specialties/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { firestore } from '@/lib/firebase-admin'  // adjust to your path
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
 
 // your wrong→right map
 const corrections: Record<string,string> = {
@@ -196,47 +197,77 @@ const corrections: Record<string,string> = {
     "Urólogo": "Urología"
 }
 
+const BATCH_SIZE = 400     // max writes per batch before commit & pause
+const READ_LIMIT = 500       // docs to fetch per page
+const PAUSE_MS   = 200       // pause between commits (ms)
+
 function fixArray(arr: string[]): string[] {
+  // replace via corrections map, then dedupe while preserving order
   const mapped = arr.map(v => corrections[v] ?? v)
   return Array.from(new Set(mapped))
 }
 
+async function migrateAll(startAfter?: QueryDocumentSnapshot) {
+  // 1) page through doctors collection
+  let q = firestore
+            .collection('doctors')
+            .orderBy('__name__')
+            .limit(READ_LIMIT)
+  if (startAfter) q = q.startAfter(startAfter)
+
+  const snap = await q.get()
+  if (snap.empty) return
+
+  // 2) batch & throttle updates
+  let batch = firestore.batch()
+  let ops   = 0
+
+  for (const doc of snap.docs) {
+    const data = doc.data()
+    if (!Array.isArray(data.specialties)) continue
+
+    const fixed = fixArray(data.specialties)
+    const changed = (
+      fixed.length !== data.specialties.length ||
+      fixed.some((v, i) => v !== data.specialties[i])
+    )
+
+    if (changed) {
+      batch.update(doc.ref, { specialties: fixed })
+      ops++
+    }
+
+    if (ops >= BATCH_SIZE) {
+      await batch.commit()
+      await new Promise(r => setTimeout(r, PAUSE_MS))
+      batch = firestore.batch()
+      ops = 0
+    }
+  }
+
+  // commit any leftover writes
+  if (ops > 0) {
+    await batch.commit()
+    await new Promise(r => setTimeout(r, PAUSE_MS))
+  }
+
+  // recurse to next page
+  const lastDoc = snap.docs[snap.docs.length - 1]
+  await migrateAll(lastDoc)
+}
+
 export async function GET(request: NextRequest) {
+  // simple token auth
   const token = request.nextUrl.searchParams.get('token')
   if (token !== process.env.MIGRATE_TOKEN) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const snap = await firestore.collection('doctors').get()
-    let batch = firestore.batch()
-    let ops = 0
-    const BATCH_SIZE = 450
-
-    for (const doc of snap.docs) {
-      const data = doc.data()
-      if (!Array.isArray(data.specialties)) continue
-
-      const fixed = fixArray(data.specialties)
-      if (
-        fixed.length !== data.specialties.length ||
-        fixed.some((v,i) => v !== data.specialties[i])
-      ) {
-        batch.update(doc.ref, { specialties: fixed })
-        ops++
-      }
-
-      if (ops >= BATCH_SIZE) {
-        await batch.commit()
-        batch = firestore.batch()
-        ops = 0
-      }
-    }
-    if (ops > 0) await batch.commit()
-
-    return NextResponse.json({ success: true, processed: snap.size })
-  } catch (e: any) {
-    console.error(e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    await migrateAll()
+    return NextResponse.json({ success: true }, { status: 200 })
+  } catch (err: any) {
+    console.error(err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
