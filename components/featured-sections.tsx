@@ -35,7 +35,7 @@ const FEATURED_DATA = {
     "Alergología",  // 61
     "Radiología y Diagnóstico por Imagen",  // 61
     "Cirugía Pediátrica",  // 60
-    "Reumatólogo",  // 59
+    "Reumatología",  // 59
     "Nefrología",  // 58
     "Neurología",  // 56
     "Oncología Médica",  // 56
@@ -47,7 +47,6 @@ const FEATURED_DATA = {
     "Cardiología",  // 39
     "Medicina de Urgencias y Cuidados Intensivos",  // 39
     "Rehabilitación y Medicina Física",  // 37
-    "Reumatología",  // 36
     "Infectología",  // 33
     "Medicina del Deporte",  // 32
     "Angiología",  // 30
@@ -70,7 +69,7 @@ const FEATURED_DATA = {
     "Podología y Podiatría",  // 11
     "otoneurología y foniatría",  // 11
     "Medicina del Dolor y Algología",  // 10
-    "Gastroenterólogo pediátrico",  // 10
+    "Gastroenterología Pediátrica",  // 10
     "Sexología",  // 10
     "Salud Pública y Medicina Preventiva",  // 9
     "Naturopatía",  // 9
@@ -98,9 +97,8 @@ const FEATURED_DATA = {
     "Infectología Pediátrica",  // 2
     "Otorrinolaringología pediátrica",  // 2
     "Terapia ocupacional",  // 2
-    "Gastroenterología Pediátrica",  // 1
     "Ortodoncia",  // 1
-    "Patología Bucal",  // 1
+    "Patología Bucal" // 1
     // "Urología pediátrica",  // 1
 
   ],
