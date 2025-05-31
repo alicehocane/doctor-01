@@ -86,7 +86,6 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   { value: "Fisioterapia", label: "Fisioterapia" },
   { value: "Hematología", label: "Hematología" },
   { value: "Medicina Integrativa y Complementaria", label: "Medicina Integrativa y Complementaria" },
-  { value: "Urología", label: "Urología" },
   { value: "Endocrinología, Diabetes y Metabolismo", label: "Endocrinología, Diabetes y Metabolismo" },
   { value: "Cardiología", label: "Cardiología" },
   { value: "Medicina de Urgencias y Cuidados Intensivos", label: "Medicina de Urgencias y Cuidados Intensivos" },
