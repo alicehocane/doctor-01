@@ -82,7 +82,6 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   { value: "Cirugía Pediátrica", label: "Cirugía Pediátrica" },
   { value: "Reumatología", label: "Reumatología" },
   { value: "Nefrología", label: "Nefrología" },
-  { value: "Neurología", label: "Neurología" },
   { value: "Oncología Médica", label: "Oncología Médica" },
   { value: "Fisioterapia", label: "Fisioterapia" },
   { value: "Hematología", label: "Hematología" },
