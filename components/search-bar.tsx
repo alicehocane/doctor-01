@@ -1548,7 +1548,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                       className="
                         cursor-pointer
                         px-3
-                        py-1
+                        py-2
                         text-sm
                         text-foreground
                         hover:bg-accent
@@ -1559,7 +1559,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                     </li>
                   ))
                 ) : (
-                  <li className="px-3 py-1 text-sm text-muted-foreground">
+                  <li className="px-3 py-2 text-sm text-muted-foreground">
                     No hay coincidencias
                   </li>
                 )}
@@ -1670,7 +1670,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                         className="
                           cursor-pointer
                           px-3
-                          py-1
+                          py-2
                           text-sm
                           text-foreground
                           hover:bg-accent
@@ -1681,7 +1681,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                       </li>
                     ))
                   ) : (
-                    <li className="px-3 py-1 text-sm text-muted-foreground">
+                    <li className="px-3 py-2 text-sm text-muted-foreground">
                       No hay coincidencias
                     </li>
                   )}
