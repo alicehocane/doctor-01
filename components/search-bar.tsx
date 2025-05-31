@@ -3661,7 +3661,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               id="city"
               type="text"
               placeholder="Escribe para buscar ciudad"
-              value={selectedCity.label}
+              value={selectedCity ? selectedCity.label : cityQuery}
               onChange={(e) => {
                 setCityQuery(e.target.value)
                 setSelectedCity(null) // clear selection while typing
