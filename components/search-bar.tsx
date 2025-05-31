@@ -4,16 +4,23 @@
 import { useState, useMemo, useRef, useEffect } from "react"
 import { Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useRouter } from "next/navigation"
 import { trackSearch } from "@/lib/search-tracker"
+
+interface SearchBarProps {
+  className?: string
+}
 
 interface ComboboxItem {
   value: string
   label: string
-}
-
-interface SearchBarProps {
-  className?: string
 }
 
 export default function SearchBar({ className = "" }: SearchBarProps) {
@@ -61,7 +68,6 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     { value: "Nutrición y Dietética", label: "Nutrición y Dietética" },
     { value: "Anestesiología", label: "Anestesiología" },
     { value: "Patología Bucal", label: "Patología Bucal" },
-    // …añade más si lo deseas
   ]
 
   const allPadecimientos: ComboboxItem[] = [
@@ -74,7 +80,6 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     { value: "Trastorno de conducta", label: "Trastorno de conducta" },
     { value: "Depresión en adolescentes", label: "Depresión en adolescentes" },
     { value: "Hipertensión", label: "Hipertensión" },
-    // …añade más si lo deseas
   ]
 
   // ---------------------- Filter Logic ----------------------
@@ -123,12 +128,48 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     }
   }, [])
 
+  // ---------------------- Refs for auto-focus ----------------------
+  const cityInputRef = useRef<HTMLInputElement>(null)
+  const optionInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (cityDropdownOpen) {
+      setTimeout(() => cityInputRef.current?.focus(), 0)
+    }
+  }, [cityDropdownOpen])
+
+  useEffect(() => {
+    if (optionDropdownOpen) {
+      setTimeout(() => optionInputRef.current?.focus(), 0)
+    }
+  }, [optionDropdownOpen])
+
+  // ---------------------- Search Handler ----------------------
+  const handleSearch = async () => {
+    if (selectedCity && selectedOption) {
+      setIsSearching(true)
+      try {
+        await trackSearch(searchBy, selectedOption.value)
+        router.push(
+          `/buscar?ciudad=${encodeURIComponent(
+            selectedCity.value
+          )}&tipo=${searchBy}&valor=${encodeURIComponent(
+            selectedOption.value
+          )}`
+        )
+      } catch (error) {
+        console.error("Error tracking search:", error)
+      } finally {
+        setIsSearching(false)
+      }
+    }
+  }
+
   // ---------------------- Render ----------------------
   return (
     <div
       className={`bg-card rounded-lg shadow-sm p-4 mx-auto w-full max-w-screen-xl ${className}`}
     >
-      {/* flex direction: column on mobile, row centered on md+ */}
       <div className="flex flex-col gap-3 items-stretch md:flex-row md:justify-center md:items-end">
         {/* ──────────────────────────────────────────────────────────────── */}
         {/*                          Ciudad Combobox                        */}
@@ -147,11 +188,15 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               onChange={(e) => {
                 setCityQuery(e.target.value)
                 setSelectedCity(null)
-                setSearchValue("")
                 setOptionQuery("")
+                setSelectedOption(null)
+                setIsOptionOpen(false)
                 setCityDropdownOpen(true)
               }}
-              onFocus={() => setCityDropdownOpen(true)}
+              onFocus={() => {
+                setCityDropdownOpen(true)
+                setIsOptionOpen(false)
+              }}
               className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
 
@@ -166,6 +211,9 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                         setSelectedCity(c)
                         setCityQuery(c.label)
                         setCityDropdownOpen(false)
+                        // Reset option when city changes
+                        setSelectedOption(null)
+                        setOptionQuery("")
                       }}
                       className="cursor-pointer px-3 py-1 text-sm hover:bg-gray-100"
                     >
@@ -193,21 +241,22 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
             >
               Buscar por
             </label>
-            <select
-              id="search-by"
+            <Select
               value={searchBy}
-              onChange={(e) => {
-                const val = e.target.value as "especialidad" | "padecimiento"
+              onValueChange={(val) => {
                 setSearchBy(val)
                 setSelectedOption(null)
-                setSearchValue("")
                 setOptionQuery("")
               }}
-              className="w-full cursor-pointer rounded-md border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              <option value="especialidad">Especialidad</option>
-              <option value="padecimiento">Padecimiento</option>
-            </select>
+              <SelectTrigger id="search-by" className="w-full">
+                <SelectValue placeholder="Selecciona tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="especialidad">Especialidad</SelectItem>
+                <SelectItem value="padecimiento">Padecimiento</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         )}
 
@@ -231,10 +280,12 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                 onChange={(e) => {
                   setOptionQuery(e.target.value)
                   setSelectedOption(null)
-                  setSearchValue("")
-                  setOptionDropdownOpen(true)
+                  setIsOptionOpen(true)
                 }}
-                onFocus={() => setOptionDropdownOpen(true)}
+                onFocus={() => {
+                  setIsOptionOpen(true)
+                  setCityDropdownOpen(false)
+                }}
                 className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
 
@@ -248,8 +299,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                         onClick={() => {
                           setSelectedOption(opt)
                           setOptionQuery(opt.label)
-                          setOptionDropdownOpen(false)
-                          setSearchValue(opt.value)
+                          setIsOptionOpen(false)
                         }}
                         className="cursor-pointer px-3 py-1 text-sm hover:bg-gray-100"
                       >
@@ -271,24 +321,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
         {/*                         Botón “Buscar”                           */}
         {/* ──────────────────────────────────────────────────────────────── */}
         <Button
-          onClick={async () => {
-            if (!selectedCity || !selectedOption) return
-            setIsSearching(true)
-            try {
-              await trackSearch(searchBy, selectedOption.value)
-              router.push(
-                `/buscar?ciudad=${encodeURIComponent(
-                  selectedCity.value
-                )}&tipo=${searchBy}&valor=${encodeURIComponent(
-                  selectedOption.value
-                )}`
-              )
-            } catch (error) {
-              console.error("Error tracking search:", error)
-            } finally {
-              setIsSearching(false)
-            }
-          }}
+          onClick={handleSearch}
           className="w-full md:w-auto"
           disabled={!selectedCity || !selectedOption || isSearching}
         >
