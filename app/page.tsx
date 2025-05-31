@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <MainLayout showSearch={false}>
+    <MainLayout showSearch={true}>
       {/* Hero Section */}
       <section className="py-12 md:py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
@@ -55,14 +55,14 @@ export default function Home() {
 
       {/* Search Section */}
       <section id="search-section" className="py-12 scroll-mt-20">
-        <div className="text-center mb-8">
+        {/* <div className="text-center mb-8">
           <h2 className="text-3xl font-bold mb-4">Busca médicos por:</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Encuentra el especialista que necesitas de manera rápida y sencilla
           </p>
         </div>
 
-        <SearchBar className="mb-12" />
+        <SearchBar className="mb-12" /> */}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
           <Card>
