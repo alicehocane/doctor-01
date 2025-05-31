@@ -1,4 +1,4 @@
-"use client"
+use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
 import { Search } from "lucide-react"
@@ -46,13 +46,12 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   // Final search button loading
   const [isSearching, setIsSearching] = useState(false)
 
-    // ---------------------- Hardcoded Data ----------------------
+  // ---------------------- Hardcoded Data ----------------------
   const ciudades: ComboboxItem[] = [
     { value: "Ciudad de México", label: "Ciudad de México" },
     { value: "Monterrey", label: "Monterrey" },
     { value: "Guadalajara", label: "Guadalajara" },
   ]
-
 
 
   const allEspecialidades: ComboboxItem[] = [
@@ -3563,6 +3562,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   ]
   // ---------------------- Filter Logic ----------------------
 // ---------------------- Filter Logic ----------------------
+   // ---------------------- Filter Logic ----------------------
   const filteredCities = useMemo(() => {
     if (!cityQuery) return []
     return ciudades.filter((c) =>
