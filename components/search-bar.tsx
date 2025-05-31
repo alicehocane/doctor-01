@@ -26,8 +26,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   const router = useRouter()
 
   // ───────────────────────────────────────────────────────────
-  // 1) Hardcode your city list first, so we can use ciudades[0]
-  //    as the default selection in useState.
+  // 1) Hardcode your city list first, so we can default to ciudades[0].
   // ───────────────────────────────────────────────────────────
   const ciudades: ComboboxItem[] = [
     { value: "Ciudad de México", label: "Ciudad de México" },
@@ -35,8 +34,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     { value: "Guadalajara", label: "Guadalajara" },
   ]
 
-  // 2) Now initialize state with the default city = ciudades[0].
-  //    cityQuery = ciudades[0].label ensures the input shows “Ciudad de México”.
+  // 2) Initialize selectedCity = ciudades[0], cityQuery = "Ciudad de México"
   const [cityQuery, setCityQuery] = useState<string>(ciudades[0].label)
   const [selectedCity, setSelectedCity] = useState<ComboboxItem>(ciudades[0])
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false)
@@ -48,11 +46,14 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
 
   // Option combobox (Especialidad or Padecimiento)
   const [optionQuery, setOptionQuery] = useState<string>("")
-  const [selectedOption, setSelectedOption] = useState<ComboboxItem | null>(null)
+  const [selectedOption, setSelectedOption] = useState<ComboboxItem | null>(
+    null
+  )
   const [optionDropdownOpen, setOptionDropdownOpen] = useState(false)
 
   // Final search button loading
   const [isSearching, setIsSearching] = useState(false)
+
 
   const allEspecialidades: ComboboxItem[] = [
   { value: "Psicología", label: "Psicología" },
@@ -3561,7 +3562,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     // "Úlcera aftosa"  // 1
   ]
   // ---------------------- Filter Logic ----------------------
- const filteredCities = useMemo(() => {
+const filteredCities = useMemo(() => {
     if (!cityQuery) return []
     return ciudades.filter((c) =>
       c.label.toLowerCase().includes(cityQuery.toLowerCase())
@@ -3577,7 +3578,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   }, [searchBy, optionQuery])
 
   // ───────────────────────────────────────────────────────────
-  // 5) Click-outside handling (unchanged).
+  // 5) Click‐outside handlers (unchanged)
   // ───────────────────────────────────────────────────────────
   const cityRef = useRef<HTMLDivElement>(null)
   const optionRef = useRef<HTMLDivElement>(null)
@@ -3598,7 +3599,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   }, [])
 
   // ───────────────────────────────────────────────────────────
-  // 6) Auto‐focus refs (unchanged).
+  // 6) Auto‐focus refs (unchanged)
   // ───────────────────────────────────────────────────────────
   const cityInputRef = useRef<HTMLInputElement>(null)
   const optionInputRef = useRef<HTMLInputElement>(null)
@@ -3616,7 +3617,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   }, [optionDropdownOpen])
 
   // ───────────────────────────────────────────────────────────
-  // 7) Search handler (unchanged, except minor backticks fix).
+  // 7) Search handler (minor backtick fix)
   // ───────────────────────────────────────────────────────────
   const handleSearch = async () => {
     if (selectedCity && selectedOption) {
@@ -3640,8 +3641,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
 
   // ───────────────────────────────────────────────────────────
   // 8) Render
-  //    Because selectedCity is never null (we default it to ciudades[0]),
-  //    the “Buscar por” <Select> and option input will show immediately.
+  //    Notice the conditional in `value={…}` for the city input.
   // ───────────────────────────────────────────────────────────
   return (
     <div
@@ -3661,10 +3661,12 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               id="city"
               type="text"
               placeholder="Escribe para buscar ciudad"
+              // ← Use cityQuery whenever selectedCity is null:
               value={selectedCity ? selectedCity.label : cityQuery}
               onChange={(e) => {
+                // As soon as user types, clear the previously selectedCity
                 setCityQuery(e.target.value)
-                setSelectedCity(null) // clear selection while typing
+                setSelectedCity(null)
                 setOptionQuery("")
                 setSelectedOption(null)
                 setOptionDropdownOpen(false)
@@ -3885,4 +3887,3 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
       </div>
     </div>
   )
-}
