@@ -1,4 +1,3 @@
-// app/page.tsx
 import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
@@ -11,14 +10,13 @@ import SearchBar from "@/components/search-bar"
 
 export const metadata: Metadata = {
   title: "Busca Doctor México | Encuentra médicos de confianza en México",
-  description:
-    "Encuentra médicos de confianza por ciudad, especialidad o padecimientos atendidos en México.",
+  description: "Encuentra médicos de confianza por ciudad, especialidad o padecimientos atendidos en México.",
 }
 
 export default function Home() {
   return (
     <MainLayout showSearch={false}>
-      {/* ─────────── Hero Section ─────────── */}
+      {/* Hero Section */}
       <section className="py-12 md:py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <div className="space-y-6">
@@ -26,8 +24,7 @@ export default function Home() {
               Encuentra el médico adecuado para tu salud
             </h1>
             <p className="text-xl text-muted-foreground">
-              Directorio completo de médicos en México, organizados por ciudad,
-              especialidad y padecimientos atendidos.
+              Directorio completo de médicos en México, organizados por ciudad, especialidad y padecimientos atendidos.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" asChild>
@@ -56,27 +53,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─────────── Sticky Search Section ─────────── */}
-      {/*
-        Wrap the SearchBar in a container that is "sticky" just below the header.
-        Assuming your header height is ~4rem (Tailwind's "top-16" = 4rem).
-        Adjust "top-16" if your header is taller/smaller.
-      */}
-      <div className="sticky top-16 z-40 bg-background border-b shadow-sm" id="search-section">
-        <div className="container mx-auto px-4 py-4">
-          {/* Now the SearchBar will stick under the header as you scroll down */}
-          <SearchBar className="mb-0" />
-        </div>
-      </div>
-
-      {/* ─────────── “Search by” Cards (rest of content) ─────────── */}
-      <section className="py-12 container mx-auto px-4">
+      {/* Search Section */}
+      <section id="search-section" className="py-12 scroll-mt-20">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold mb-4">Busca médicos por:</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Encuentra el especialista que necesitas de manera rápida y sencilla
           </p>
         </div>
+
+        <SearchBar className="mb-12" />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
           <Card>
@@ -87,13 +73,11 @@ export default function Home() {
                 </div>
                 <h3 className="text-xl font-medium">Por Ciudad</h3>
                 <p className="text-muted-foreground">
-                  Encuentra médicos cercanos a tu ubicación en cualquier ciudad
-                  de México.
+                  Encuentra médicos cercanos a tu ubicación en cualquier ciudad de México.
                 </p>
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
@@ -102,13 +86,11 @@ export default function Home() {
                 </div>
                 <h3 className="text-xl font-medium">Por Especialidad</h3>
                 <p className="text-muted-foreground">
-                  Busca médicos por su especialidad médica, desde cardiología
-                  hasta pediatría.
+                  Busca médicos por su especialidad médica, desde cardiología hasta pediatría.
                 </p>
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
@@ -117,8 +99,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-xl font-medium">Por Padecimiento</h3>
                 <p className="text-muted-foreground">
-                  Encuentra especialistas que tratan tu condición o padecimiento
-                  específico.
+                  Encuentra especialistas que tratan tu condición o padecimiento específico.
                 </p>
               </div>
             </CardContent>
@@ -126,15 +107,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─────────── Featured Sections ─────────── */}
+      {/* Featured Sections */}
       <section className="py-12">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold mb-4">Explora por categorías</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Navega por nuestras categorías más populares para encontrar el
-            médico que necesitas
+            Navega por nuestras categorías más populares para encontrar el médico que necesitas
           </p>
         </div>
+
         <FeaturedSections />
       </section>
     </MainLayout>
