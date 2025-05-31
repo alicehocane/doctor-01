@@ -8,7 +8,6 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 
 // 1. Import Header and SearchBar
-import Header from "@/components/header"
 import SearchBar from "@/components/search-bar"
 
 const inter = Inter({ subsets: ["latin"] })
