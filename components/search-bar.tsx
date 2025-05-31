@@ -179,7 +179,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
             Buscar en
           </label>
           <div className="relative">
-            {/* Input styled like a select trigger */}
+            {/* Input styled to match the dropdown trigger exactly */}
             <input
               id="city"
               type="text"
@@ -190,19 +190,45 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                 setSelectedCity(null)
                 setOptionQuery("")
                 setSelectedOption(null)
-                setIsOptionOpen(false)
+                setOptionDropdownOpen(false)
                 setCityDropdownOpen(true)
               }}
               onFocus={() => {
                 setCityDropdownOpen(true)
-                setIsOptionOpen(false)
+                setOptionDropdownOpen(false)
               }}
-              className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="
+                w-full 
+                h-10 
+                rounded-md 
+                border 
+                border-gray-200 
+                bg-white 
+                px-3 
+                py-1 
+                text-sm 
+                focus:outline-none 
+                focus:ring-2 
+                focus:ring-primary
+              "
             />
 
-            {/* Only show dropdown if user typed at least one character */}
+            {/* Only show dropdown when user has at least one character */}
             {cityDropdownOpen && cityQuery.length > 0 && (
-              <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+              <ul className="
+                absolute 
+                z-10 
+                mt-1 
+                max-h-60 
+                w-full 
+                overflow-auto 
+                rounded-md 
+                bg-white 
+                shadow-lg 
+                ring-1 
+                ring-black 
+                ring-opacity-5
+              ">
                 {filteredCities.length > 0 ? (
                   filteredCities.map((c) => (
                     <li
@@ -211,11 +237,17 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                         setSelectedCity(c)
                         setCityQuery(c.label)
                         setCityDropdownOpen(false)
-                        // Reset option when city changes
+                        // Reset downstream option
                         setSelectedOption(null)
                         setOptionQuery("")
                       }}
-                      className="cursor-pointer px-3 py-1 text-sm hover:bg-gray-100"
+                      className="
+                        cursor-pointer 
+                        px-3 
+                        py-1 
+                        text-sm 
+                        hover:bg-gray-100
+                      "
                     >
                       {c.label}
                     </li>
@@ -249,7 +281,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                 setOptionQuery("")
               }}
             >
-              <SelectTrigger id="search-by" className="w-full">
+              <SelectTrigger id="search-by" className="w-full h-10">
                 <SelectValue placeholder="Selecciona tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -280,18 +312,44 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                 onChange={(e) => {
                   setOptionQuery(e.target.value)
                   setSelectedOption(null)
-                  setIsOptionOpen(true)
+                  setOptionDropdownOpen(true)
                 }}
                 onFocus={() => {
-                  setIsOptionOpen(true)
+                  setOptionDropdownOpen(true)
                   setCityDropdownOpen(false)
                 }}
-                className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="
+                  w-full 
+                  h-10 
+                  rounded-md 
+                  border 
+                  border-gray-200 
+                  bg-white 
+                  px-3 
+                  py-1 
+                  text-sm 
+                  focus:outline-none 
+                  focus:ring-2 
+                  focus:ring-primary
+                "
               />
 
               {/* Only open suggestions when user has typed ≥1 character */}
               {optionDropdownOpen && optionQuery.length > 0 && (
-                <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+                <ul className="
+                  absolute 
+                  z-10 
+                  mt-1 
+                  max-h-60 
+                  w-full 
+                  overflow-auto 
+                  rounded-md 
+                  bg-white 
+                  shadow-lg 
+                  ring-1 
+                  ring-black 
+                  ring-opacity-5
+                ">
                   {filteredOptions.length > 0 ? (
                     filteredOptions.map((opt) => (
                       <li
@@ -299,9 +357,15 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                         onClick={() => {
                           setSelectedOption(opt)
                           setOptionQuery(opt.label)
-                          setIsOptionOpen(false)
+                          setOptionDropdownOpen(false)
                         }}
-                        className="cursor-pointer px-3 py-1 text-sm hover:bg-gray-100"
+                        className="
+                          cursor-pointer 
+                          px-3 
+                          py-1 
+                          text-sm 
+                          hover:bg-gray-100
+                        "
                       >
                         {opt.label}
                       </li>
@@ -322,7 +386,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
         {/* ──────────────────────────────────────────────────────────────── */}
         <Button
           onClick={handleSearch}
-          className="w-full md:w-auto"
+          className="w-full md:w-auto h-10"
           disabled={!selectedCity || !selectedOption || isSearching}
         >
           <Search className="h-4 w-4 mr-2" />
