@@ -1,7 +1,6 @@
-// components/search-bar.tsx
 "use client"
 
-import { useState, useMemo  } from "react"
+import { useState, useMemo } from "react"
 import { Search, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,7 +26,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   const [searchValue, setSearchValue] = useState<string>("")
   const [isSearching, setIsSearching] = useState(false)
 
-  // track how many chunks have been loaded per type
+  // Pagination state for “Ver más”
   const [loadMoreState, setLoadMoreState] = useState<{
     especialidad: number
     padecimiento: number
@@ -35,6 +34,12 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     especialidad: 1,
     padecimiento: 1,
   })
+
+  // Filter inputs for typeahead functionality
+  const [cityFilter, setCityFilter] = useState<string>("")
+  const [optionFilter, setOptionFilter] = useState<string>("")
+
+  // Hardcoded data arrays
 
   const ciudades = ["Ciudad de México", "Monterrey", "Guadalajara"]
   const allEspecialidades = [
