@@ -1,5 +1,6 @@
 "use client"
-import { useState, useMemo } from "react"
+
+import { useState, useMemo, useRef } from "react"
 import { Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,6 +29,10 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   // Typeahead filter inputs
   const [cityFilter, setCityFilter] = useState<string>("")
   const [optionFilter, setOptionFilter] = useState<string>("")
+
+  // Refs to our <input> elements
+  const cityInputRef = useRef<HTMLInputElement>(null)
+  const optionInputRef = useRef<HTMLInputElement>(null)
 
   const ciudades = ["Ciudad de México", "Monterrey", "Guadalajara"]
   const allEspecialidades = [
@@ -3583,6 +3588,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           <label htmlFor="city" className="block text-sm font-medium mb-1">
             Buscar en
           </label>
+
           <Select
             value={selectedCity}
             onValueChange={(val) => {
@@ -3590,14 +3596,25 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               setSearchValue("")
               setOptionFilter("")
             }}
+            onOpenChange={(open) => {
+              // As soon as the dropdown opens, focus the input
+              if (open) {
+                setTimeout(() => {
+                  // Timeout ensures the <input> is rendered before we call .focus()
+                  cityInputRef.current?.focus()
+                }, 0)
+              }
+            }}
           >
             <SelectTrigger id="city" className="w-full">
               <SelectValue placeholder="Escribe para buscar…" />
             </SelectTrigger>
+
             <SelectContent>
               {/* Typeahead input field */}
               <div className="px-3 py-2">
                 <input
+                  ref={cityInputRef}
                   type="text"
                   placeholder="Escribe para buscar ciudad"
                   className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -3605,7 +3622,6 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                   onChange={(e) => setCityFilter(e.target.value)}
                   onKeyDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
-                  autoFocus
                 />
               </div>
               <div className="max-h-[250px] overflow-y-auto">
@@ -3649,13 +3665,23 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         )}
 
-        {/* ---------------------- Value + typeahead ---------------------- */}
+        {/* ---------------------- Value + Typeahead ---------------------- */}
         {selectedCity && (
           <div className="w-full md:w-1/3">
             <label htmlFor="search-value" className="block text-sm font-medium mb-1">
               {searchBy === "especialidad" ? "Especialidad" : "Padecimiento"}
             </label>
-            <Select value={searchValue} onValueChange={setSearchValue}>
+            <Select
+              value={searchValue}
+              onValueChange={setSearchValue}
+              onOpenChange={(open) => {
+                if (open) {
+                  setTimeout(() => {
+                    optionInputRef.current?.focus()
+                  }, 0)
+                }
+              }}
+            >
               <SelectTrigger id="search-value" className="w-full">
                 <SelectValue placeholder="Escribe para buscar…" />
               </SelectTrigger>
@@ -3663,6 +3689,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                 {/* Typeahead input field */}
                 <div className="px-3 py-2">
                   <input
+                    ref={optionInputRef}
                     type="text"
                     placeholder={`Escribe para buscar ${searchBy}`}
                     className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -3670,7 +3697,6 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                     onChange={(e) => setOptionFilter(e.target.value)}
                     onKeyDown={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}
-                    autoFocus
                   />
                 </div>
                 <div className="max-h-[250px] overflow-y-auto">
