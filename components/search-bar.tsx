@@ -64,7 +64,6 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     "Fisioterapia",  // 53
     "Hematología",  // 51
     "Medicina Integrativa y Complementaria",  // 50
-    "Urología",  // 48
     "Endocrinología, Diabetes y Metabolismo",  // 47
     "Cardiología",  // 39
     "Medicina de Urgencias y Cuidados Intensivos",  // 39
