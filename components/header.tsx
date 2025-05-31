@@ -19,7 +19,6 @@ export default function Header() {
 
   const navLinks = [
     { href: "/", label: "Inicio" },
-    <Link href="/buscar?tipo=ciudad&valor=Monterrey">Buscar en Monterrey</Link>,
     { href: "/about", label: "Acerca de" },
     { href: "/contact", label: "Contacto" },
     
