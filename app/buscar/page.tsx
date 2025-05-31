@@ -14,9 +14,9 @@ export default function SearchPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  // const tipo   = typeof searchParams.tipo   === "string" ? searchParams.tipo   : ""
-  // const valor  = typeof searchParams.valor  === "string" ? searchParams.valor  : ""
-  // const ciudad = typeof searchParams.ciudad === "string" ? searchParams.ciudad : undefined
+  const tipo   = typeof searchParams.tipo   === "string" ? searchParams.tipo   : ""
+  const valor  = typeof searchParams.valor  === "string" ? searchParams.valor  : ""
+  const ciudad = typeof searchParams.ciudad === "string" ? searchParams.ciudad : undefined
 
   return (
     <MainLayout>
