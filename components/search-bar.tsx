@@ -25,18 +25,10 @@ interface ComboboxItem {
 export default function SearchBar({ className = "" }: SearchBarProps) {
   const router = useRouter()
 
-  // ───────────────────────────────────────────────────────────
-  // 1) Hardcode your city list first, so we can default to ciudades[0].
-  // ───────────────────────────────────────────────────────────
-  const ciudades: ComboboxItem[] = [
-    { value: "Ciudad de México", label: "Ciudad de México" },
-    { value: "Monterrey", label: "Monterrey" },
-    { value: "Guadalajara", label: "Guadalajara" },
-  ]
-
-  // 2) Initialize selectedCity = ciudades[0], cityQuery = "Ciudad de México"
-  const [cityQuery, setCityQuery] = useState<string>(ciudades[0].label)
-  const [selectedCity, setSelectedCity] = useState<ComboboxItem>(ciudades[0])
+  // ---------------------- State ----------------------
+  // City combobox
+  const [cityQuery, setCityQuery] = useState<string>("")
+  const [selectedCity, setSelectedCity] = useState<ComboboxItem | null>(null)
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false)
 
   // Search-by (Especialidad | Padecimiento)
@@ -53,6 +45,14 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
 
   // Final search button loading
   const [isSearching, setIsSearching] = useState(false)
+
+    // ---------------------- Hardcoded Data ----------------------
+  const ciudades: ComboboxItem[] = [
+    { value: "Ciudad de México", label: "Ciudad de México" },
+    { value: "Monterrey", label: "Monterrey" },
+    { value: "Guadalajara", label: "Guadalajara" },
+  ]
+
 
 
   const allEspecialidades: ComboboxItem[] = [
@@ -3562,7 +3562,8 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     // "Úlcera aftosa"  // 1
   ]
   // ---------------------- Filter Logic ----------------------
-const filteredCities = useMemo(() => {
+// ---------------------- Filter Logic ----------------------
+  const filteredCities = useMemo(() => {
     if (!cityQuery) return []
     return ciudades.filter((c) =>
       c.label.toLowerCase().includes(cityQuery.toLowerCase())
@@ -3571,24 +3572,31 @@ const filteredCities = useMemo(() => {
 
   const filteredOptions = useMemo(() => {
     if (!optionQuery) return []
-    const list = searchBy === "especialidad" ? allEspecialidades : allPadecimientos
+    const list =
+      searchBy === "especialidad"
+        ? allEspecialidades
+        : allPadecimientos
     return list.filter((opt) =>
       opt.label.toLowerCase().includes(optionQuery.toLowerCase())
     )
   }, [searchBy, optionQuery])
 
-  // ───────────────────────────────────────────────────────────
-  // 5) Click‐outside handlers (unchanged)
-  // ───────────────────────────────────────────────────────────
+  // ---------------------- Click Outside Handling ----------------------
   const cityRef = useRef<HTMLDivElement>(null)
   const optionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (cityRef.current && !cityRef.current.contains(e.target as Node)) {
+      if (
+        cityRef.current &&
+        !cityRef.current.contains(e.target as Node)
+      ) {
         setCityDropdownOpen(false)
       }
-      if (optionRef.current && !optionRef.current.contains(e.target as Node)) {
+      if (
+        optionRef.current &&
+        !optionRef.current.contains(e.target as Node)
+      ) {
         setOptionDropdownOpen(false)
       }
     }
@@ -3598,9 +3606,7 @@ const filteredCities = useMemo(() => {
     }
   }, [])
 
-  // ───────────────────────────────────────────────────────────
-  // 6) Auto‐focus refs (unchanged)
-  // ───────────────────────────────────────────────────────────
+  // ---------------------- Refs for auto-focus ----------------------
   const cityInputRef = useRef<HTMLInputElement>(null)
   const optionInputRef = useRef<HTMLInputElement>(null)
 
@@ -3616,20 +3622,18 @@ const filteredCities = useMemo(() => {
     }
   }, [optionDropdownOpen])
 
-  // ───────────────────────────────────────────────────────────
-  // 7) Search handler (minor backtick fix)
-  // ───────────────────────────────────────────────────────────
+  // ---------------------- Search Handler ----------------------
   const handleSearch = async () => {
     if (selectedCity && selectedOption) {
       setIsSearching(true)
       try {
         await trackSearch(searchBy, selectedOption.value)
         router.push(
-          `/buscar?ciudad=${encodeURIComponent(
+          /buscar?ciudad=${encodeURIComponent(
             selectedCity.value
           )}&tipo=${searchBy}&valor=${encodeURIComponent(
             selectedOption.value
-          )}`
+          )}
         )
       } catch (error) {
         console.error("Error tracking search:", error)
@@ -3639,21 +3643,15 @@ const filteredCities = useMemo(() => {
     }
   }
 
-  // ───────────────────────────────────────────────────────────
-  // 8) Render
-  //    Notice the conditional in `value={…}` for the city input.
-  // ───────────────────────────────────────────────────────────
+  // ---------------------- Render ----------------------
   return (
     <div
-      className={`bg-card rounded-lg shadow-sm p-4 mx-auto w-full max-w-screen-xl ${className}`}
+      className={bg-card rounded-lg shadow-sm p-4 mx-auto w-full max-w-screen-xl ${className}}
     >
       <div className="flex flex-col gap-3 items-stretch md:flex-row md:justify-center md:items-end">
         {/* ─────────── Ciudad Combobox ─────────── */}
         <div className="w-full md:w-1/3" ref={cityRef}>
-          <label
-            htmlFor="city"
-            className="block text-sm font-medium mb-1 text-foreground"
-          >
+          <label htmlFor="city" className="block text-sm font-medium mb-1 text-foreground">
             Buscar en
           </label>
           <div className="relative">
@@ -3661,10 +3659,8 @@ const filteredCities = useMemo(() => {
               id="city"
               type="text"
               placeholder="Escribe para buscar ciudad"
-              // ← Use cityQuery whenever selectedCity is null:
-              value={selectedCity ? selectedCity.label : cityQuery}
+              value={selectedCity?.label ?? cityQuery}
               onChange={(e) => {
-                // As soon as user types, clear the previously selectedCity
                 setCityQuery(e.target.value)
                 setSelectedCity(null)
                 setOptionQuery("")
@@ -3700,8 +3696,7 @@ const filteredCities = useMemo(() => {
             />
 
             {cityDropdownOpen && cityQuery.length > 0 && (
-              <ul
-                className="
+              <ul className="
                 absolute
                 z-10
                 mt-1
@@ -3714,8 +3709,7 @@ const filteredCities = useMemo(() => {
                 ring-1
                 ring-border
                 ring-opacity-10
-              "
-              >
+              ">
                 {filteredCities.length > 0 ? (
                   filteredCities.map((c) => (
                     <li
@@ -3791,7 +3785,7 @@ const filteredCities = useMemo(() => {
               <input
                 id="search-value"
                 type="text"
-                placeholder={`Escribe para buscar ${searchBy}`}
+                placeholder={Escribe para buscar ${searchBy}}
                 value={selectedOption?.label ?? optionQuery}
                 onChange={(e) => {
                   setOptionQuery(e.target.value)
@@ -3826,8 +3820,7 @@ const filteredCities = useMemo(() => {
               />
 
               {optionDropdownOpen && optionQuery.length > 0 && (
-                <ul
-                  className="
+                <ul className="
                   absolute
                   z-10
                   mt-1
@@ -3840,8 +3833,7 @@ const filteredCities = useMemo(() => {
                   ring-1
                   ring-border
                   ring-opacity-10
-                "
-                >
+                ">
                   {filteredOptions.length > 0 ? (
                     filteredOptions.map((opt) => (
                       <li
