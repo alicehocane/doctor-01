@@ -83,7 +83,6 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   ]
 
   // ---------------------- Filter Logic ----------------------
-  // Filter cities as soon as user types; dropdown appears only when query is non-empty
   const filteredCities = useMemo(() => {
     if (!cityQuery) return []
     return ciudades.filter((c) =>
@@ -91,7 +90,6 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     )
   }, [cityQuery])
 
-  // Filter options (especialidades or padecimientos) based on optionQuery
   const filteredOptions = useMemo(() => {
     if (!optionQuery) return []
     const list =
@@ -179,8 +177,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
             Buscar en
           </label>
           <div className="relative">
-            {/* Input styled to match the dropdown trigger exactly,
-                but using your theme tokens instead of hardcoded gray/white */}
+            {/* Input styled to exactly match the SelectTrigger in both light & dark */}
             <input
               id="city"
               type="text"
@@ -226,7 +223,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                 w-full 
                 overflow-auto 
                 rounded-md 
-                bg-popover 
+                bg-input 
                 shadow-lg 
                 ring-1 
                 ring-border 
@@ -351,7 +348,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                   w-full 
                   overflow-auto 
                   rounded-md 
-                  bg-popover 
+                  bg-input 
                   shadow-lg 
                   ring-1 
                   ring-border 
