@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useMemo } from "react"
 import { Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -3605,6 +3603,9 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                   className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   value={cityFilter}
                   onChange={(e) => setCityFilter(e.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  autoFocus
                 />
               </div>
               <div className="max-h-[250px] overflow-y-auto">
@@ -3667,6 +3668,9 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                     className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     value={optionFilter}
                     onChange={(e) => setOptionFilter(e.target.value)}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    autoFocus
                   />
                 </div>
                 <div className="max-h-[250px] overflow-y-auto">
