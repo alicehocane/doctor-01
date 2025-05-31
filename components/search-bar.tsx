@@ -30,7 +30,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   const [cityFilter, setCityFilter] = useState<string>("")
   const [optionFilter, setOptionFilter] = useState<string>("")
 
-  // Refs to our <input> elements
+  // Refs to focus the input when dropdown opens
   const cityInputRef = useRef<HTMLInputElement>(null)
   const optionInputRef = useRef<HTMLInputElement>(null)
 
@@ -3545,6 +3545,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   ]
 
   
+  // Handle final search button click
   const handleSearch = async () => {
     if (selectedCity && searchValue) {
       setIsSearching(true)
@@ -3563,13 +3564,14 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     }
   }
 
-  // Filtered lists: only show items matching what the user types
+  // Dynamically filter cities based on cityFilter text
   const filteredCities = useMemo(() => {
     return ciudades.filter((c) =>
       c.toLowerCase().includes(cityFilter.toLowerCase())
     )
   }, [cityFilter])
 
+  // Dynamically filter specialties/padecimientos based on optionFilter text
   const filteredOptions = useMemo(() => {
     const list =
       searchBy === "especialidad" ? allEspecialidades : allPadecimientos
@@ -3597,10 +3599,9 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               setOptionFilter("")
             }}
             onOpenChange={(open) => {
-              // As soon as the dropdown opens, focus the input
               if (open) {
+                // Focus the filter input as soon as the dropdown opens
                 setTimeout(() => {
-                  // Timeout ensures the <input> is rendered before we call .focus()
                   cityInputRef.current?.focus()
                 }, 0)
               }
