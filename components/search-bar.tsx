@@ -25,10 +25,20 @@ interface ComboboxItem {
 export default function SearchBar({ className = "" }: SearchBarProps) {
   const router = useRouter()
 
-  // ---------------------- State ----------------------
-  // City combobox
-  const [cityQuery, setCityQuery] = useState<string>("")
-  const [selectedCity, setSelectedCity] = useState<ComboboxItem | null>(null)
+  // ───────────────────────────────────────────────────────────
+  // 1) Hardcode your city list first, so we can use ciudades[0]
+  //    as the default selection in useState.
+  // ───────────────────────────────────────────────────────────
+  const ciudades: ComboboxItem[] = [
+    { value: "Ciudad de México", label: "Ciudad de México" },
+    { value: "Monterrey", label: "Monterrey" },
+    { value: "Guadalajara", label: "Guadalajara" },
+  ]
+
+  // 2) Now initialize state with the default city = ciudades[0].
+  //    cityQuery = ciudades[0].label ensures the input shows “Ciudad de México”.
+  const [cityQuery, setCityQuery] = useState<string>(ciudades[0].label)
+  const [selectedCity, setSelectedCity] = useState<ComboboxItem>(ciudades[0])
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false)
 
   // Search-by (Especialidad | Padecimiento)
@@ -38,20 +48,11 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
 
   // Option combobox (Especialidad or Padecimiento)
   const [optionQuery, setOptionQuery] = useState<string>("")
-  const [selectedOption, setSelectedOption] = useState<ComboboxItem | null>(
-    null
-  )
+  const [selectedOption, setSelectedOption] = useState<ComboboxItem | null>(null)
   const [optionDropdownOpen, setOptionDropdownOpen] = useState(false)
 
   // Final search button loading
   const [isSearching, setIsSearching] = useState(false)
-
-  // ---------------------- Hardcoded Data ----------------------
-  const ciudades: ComboboxItem[] = [
-    { value: "Ciudad de México", label: "Ciudad de México" },
-    { value: "Monterrey", label: "Monterrey" },
-    { value: "Guadalajara", label: "Guadalajara" },
-  ]
 
   const allEspecialidades: ComboboxItem[] = [
   { value: "Psicología", label: "Psicología" },
@@ -3560,7 +3561,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     // "Úlcera aftosa"  // 1
   ]
   // ---------------------- Filter Logic ----------------------
-  const filteredCities = useMemo(() => {
+ const filteredCities = useMemo(() => {
     if (!cityQuery) return []
     return ciudades.filter((c) =>
       c.label.toLowerCase().includes(cityQuery.toLowerCase())
@@ -3569,31 +3570,24 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
 
   const filteredOptions = useMemo(() => {
     if (!optionQuery) return []
-    const list =
-      searchBy === "especialidad"
-        ? allEspecialidades
-        : allPadecimientos
+    const list = searchBy === "especialidad" ? allEspecialidades : allPadecimientos
     return list.filter((opt) =>
       opt.label.toLowerCase().includes(optionQuery.toLowerCase())
     )
   }, [searchBy, optionQuery])
 
-  // ---------------------- Click Outside Handling ----------------------
+  // ───────────────────────────────────────────────────────────
+  // 5) Click-outside handling (unchanged).
+  // ───────────────────────────────────────────────────────────
   const cityRef = useRef<HTMLDivElement>(null)
   const optionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        cityRef.current &&
-        !cityRef.current.contains(e.target as Node)
-      ) {
+      if (cityRef.current && !cityRef.current.contains(e.target as Node)) {
         setCityDropdownOpen(false)
       }
-      if (
-        optionRef.current &&
-        !optionRef.current.contains(e.target as Node)
-      ) {
+      if (optionRef.current && !optionRef.current.contains(e.target as Node)) {
         setOptionDropdownOpen(false)
       }
     }
@@ -3603,7 +3597,9 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     }
   }, [])
 
-  // ---------------------- Refs for auto-focus ----------------------
+  // ───────────────────────────────────────────────────────────
+  // 6) Auto‐focus refs (unchanged).
+  // ───────────────────────────────────────────────────────────
   const cityInputRef = useRef<HTMLInputElement>(null)
   const optionInputRef = useRef<HTMLInputElement>(null)
 
@@ -3619,7 +3615,9 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     }
   }, [optionDropdownOpen])
 
-  // ---------------------- Search Handler ----------------------
+  // ───────────────────────────────────────────────────────────
+  // 7) Search handler (unchanged, except minor backticks fix).
+  // ───────────────────────────────────────────────────────────
   const handleSearch = async () => {
     if (selectedCity && selectedOption) {
       setIsSearching(true)
@@ -3640,7 +3638,11 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     }
   }
 
-  // ---------------------- Render ----------------------
+  // ───────────────────────────────────────────────────────────
+  // 8) Render
+  //    Because selectedCity is never null (we default it to ciudades[0]),
+  //    the “Buscar por” <Select> and option input will show immediately.
+  // ───────────────────────────────────────────────────────────
   return (
     <div
       className={`bg-card rounded-lg shadow-sm p-4 mx-auto w-full max-w-screen-xl ${className}`}
@@ -3648,7 +3650,10 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
       <div className="flex flex-col gap-3 items-stretch md:flex-row md:justify-center md:items-end">
         {/* ─────────── Ciudad Combobox ─────────── */}
         <div className="w-full md:w-1/3" ref={cityRef}>
-          <label htmlFor="city" className="block text-sm font-medium mb-1 text-foreground">
+          <label
+            htmlFor="city"
+            className="block text-sm font-medium mb-1 text-foreground"
+          >
             Buscar en
           </label>
           <div className="relative">
@@ -3656,10 +3661,10 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               id="city"
               type="text"
               placeholder="Escribe para buscar ciudad"
-              value={selectedCity?.label ?? cityQuery}
+              value={selectedCity.label}
               onChange={(e) => {
                 setCityQuery(e.target.value)
-                setSelectedCity(null)
+                setSelectedCity(null) // clear selection while typing
                 setOptionQuery("")
                 setSelectedOption(null)
                 setOptionDropdownOpen(false)
@@ -3693,7 +3698,8 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
             />
 
             {cityDropdownOpen && cityQuery.length > 0 && (
-              <ul className="
+              <ul
+                className="
                 absolute
                 z-10
                 mt-1
@@ -3706,7 +3712,8 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                 ring-1
                 ring-border
                 ring-opacity-10
-              ">
+              "
+              >
                 {filteredCities.length > 0 ? (
                   filteredCities.map((c) => (
                     <li
@@ -3817,7 +3824,8 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               />
 
               {optionDropdownOpen && optionQuery.length > 0 && (
-                <ul className="
+                <ul
+                  className="
                   absolute
                   z-10
                   mt-1
@@ -3830,7 +3838,8 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                   ring-1
                   ring-border
                   ring-opacity-10
-                ">
+                "
+                >
                   {filteredOptions.length > 0 ? (
                     filteredOptions.map((opt) => (
                       <li
