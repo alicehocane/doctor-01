@@ -175,11 +175,12 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
         {/*                          Ciudad Combobox                        */}
         {/* ──────────────────────────────────────────────────────────────── */}
         <div className="w-full md:w-1/3" ref={cityRef}>
-          <label htmlFor="city" className="block text-sm font-medium mb-1">
+          <label htmlFor="city" className="block text-sm font-medium mb-1 text-foreground">
             Buscar en
           </label>
           <div className="relative">
-            {/* Input styled to match the dropdown trigger exactly */}
+            {/* Input styled to match the dropdown trigger exactly,
+                but using your theme tokens instead of hardcoded gray/white */}
             <input
               id="city"
               type="text"
@@ -202,22 +203,16 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                 h-10 
                 rounded-md 
                 border 
-                border-gray-200 
-                bg-white 
+                border-border 
+                bg-input 
                 px-3 
                 py-1 
                 text-sm 
-                text-gray-900 
-                placeholder-gray-500 
+                text-foreground 
+                placeholder:text-muted-foreground 
                 focus:outline-none 
                 focus:ring-2 
-                focus:ring-primary 
-
-                /* DARK MODE */
-                dark:bg-gray-800 
-                dark:border-gray-700 
-                dark:text-gray-100 
-                dark:placeholder-gray-400
+                focus:ring-primary
               "
             />
 
@@ -231,15 +226,11 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                 w-full 
                 overflow-auto 
                 rounded-md 
-                bg-white 
+                bg-popover 
                 shadow-lg 
                 ring-1 
-                ring-black 
-                ring-opacity-5
-
-                /* DARK MODE */
-                dark:bg-gray-900 
-                dark:ring-gray-700
+                ring-border 
+                ring-opacity-10
               ">
                 {filteredCities.length > 0 ? (
                   filteredCities.map((c) => (
@@ -258,17 +249,16 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                         px-3 
                         py-1 
                         text-sm 
-                        hover:bg-gray-100 
-
-                        /* DARK MODE */
-                        dark:hover:bg-gray-800
+                        text-foreground 
+                        hover:bg-accent 
+                        hover:text-accent-foreground
                       "
                     >
                       {c.label}
                     </li>
                   ))
                 ) : (
-                  <li className="px-3 py-1 text-sm text-gray-500 dark:text-gray-400">
+                  <li className="px-3 py-1 text-sm text-muted-foreground">
                     No hay coincidencias
                   </li>
                 )}
@@ -284,7 +274,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           <div className="w-full md:w-1/3">
             <label
               htmlFor="search-by"
-              className="block text-sm font-medium mb-1"
+              className="block text-sm font-medium mb-1 text-foreground"
             >
               Buscar por
             </label>
@@ -314,7 +304,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           <div className="w-full md:w-1/3" ref={optionRef}>
             <label
               htmlFor="search-value"
-              className="block text-sm font-medium mb-1"
+              className="block text-sm font-medium mb-1 text-foreground"
             >
               {searchBy === "especialidad" ? "Especialidad" : "Padecimiento"}
             </label>
@@ -338,22 +328,16 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                   h-10 
                   rounded-md 
                   border 
-                  border-gray-200 
-                  bg-white 
+                  border-border 
+                  bg-input 
                   px-3 
                   py-1 
                   text-sm 
-                  text-gray-900 
-                  placeholder-gray-500 
+                  text-foreground 
+                  placeholder:text-muted-foreground 
                   focus:outline-none 
                   focus:ring-2 
-                  focus:ring-primary 
-
-                  /* DARK MODE */
-                  dark:bg-gray-800 
-                  dark:border-gray-700 
-                  dark:text-gray-100 
-                  dark:placeholder-gray-400
+                  focus:ring-primary
                 "
               />
 
@@ -367,15 +351,11 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                   w-full 
                   overflow-auto 
                   rounded-md 
-                  bg-white 
+                  bg-popover 
                   shadow-lg 
                   ring-1 
-                  ring-black 
-                  ring-opacity-5
-
-                  /* DARK MODE */
-                  dark:bg-gray-900 
-                  dark:ring-gray-700
+                  ring-border 
+                  ring-opacity-10
                 ">
                   {filteredOptions.length > 0 ? (
                     filteredOptions.map((opt) => (
@@ -391,17 +371,16 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                           px-3 
                           py-1 
                           text-sm 
-                          hover:bg-gray-100 
-
-                          /* DARK MODE */
-                          dark:hover:bg-gray-800
+                          text-foreground 
+                          hover:bg-accent 
+                          hover:text-accent-foreground
                         "
                       >
                         {opt.label}
                       </li>
                     ))
                   ) : (
-                    <li className="px-3 py-1 text-sm text-gray-500 dark:text-gray-400">
+                    <li className="px-3 py-1 text-sm text-muted-foreground">
                       No hay coincidencias
                     </li>
                   )}
