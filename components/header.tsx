@@ -8,6 +8,7 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
+
 export default function Header() {
   const pathname = usePathname()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -18,7 +19,7 @@ export default function Header() {
 
   const navLinks = [
     { href: "/", label: "Inicio" },
-    { href: "/buscar", label: "Buscar" },
+    <Link href="/buscar?tipo=ciudad&valor=Monterrey">Buscar en Monterrey</Link>,
     { href: "/about", label: "Acerca de" },
     { href: "/contact", label: "Contacto" },
     
