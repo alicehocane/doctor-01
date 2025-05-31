@@ -169,15 +169,12 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
       className={`bg-card rounded-lg shadow-sm p-4 mx-auto w-full max-w-screen-xl ${className}`}
     >
       <div className="flex flex-col gap-3 items-stretch md:flex-row md:justify-center md:items-end">
-        {/* ──────────────────────────────────────────────────────────────── */}
-        {/*                          Ciudad Combobox                        */}
-        {/* ──────────────────────────────────────────────────────────────── */}
+        {/* ─────────── Ciudad Combobox ─────────── */}
         <div className="w-full md:w-1/3" ref={cityRef}>
           <label htmlFor="city" className="block text-sm font-medium mb-1 text-foreground">
             Buscar en
           </label>
           <div className="relative">
-            {/* Input styled to exactly match the SelectTrigger in both light & dark */}
             <input
               id="city"
               type="text"
@@ -196,37 +193,41 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                 setOptionDropdownOpen(false)
               }}
               className="
-                w-full 
-                h-10 
-                rounded-md 
-                border 
-                border-border 
-                bg-input 
-                px-3 
-                py-1 
-                text-sm 
-                text-foreground 
-                placeholder:text-muted-foreground 
-                focus:outline-none 
-                focus:ring-2 
-                focus:ring-primary
+                w-full
+                h-10
+                rounded-md
+                border
+                border-input
+                bg-background
+                px-3
+                py-2
+                text-sm
+                text-foreground
+                placeholder:text-muted-foreground
+                focus:outline-none
+                focus:ring-2
+                focus:ring-ring
+                focus:ring-offset-2
+                ring-offset-background
+                disabled:cursor-not-allowed
+                disabled:opacity-50
               "
+              ref={cityInputRef}
             />
 
-            {/* Only show dropdown if user typed at least one character */}
             {cityDropdownOpen && cityQuery.length > 0 && (
               <ul className="
-                absolute 
-                z-10 
-                mt-1 
-                max-h-60 
-                w-full 
-                overflow-auto 
-                rounded-md 
-                bg-input 
-                shadow-lg 
-                ring-1 
-                ring-border 
+                absolute
+                z-10
+                mt-1
+                max-h-60
+                w-full
+                overflow-auto
+                rounded-md
+                bg-background
+                shadow-lg
+                ring-1
+                ring-border
                 ring-opacity-10
               ">
                 {filteredCities.length > 0 ? (
@@ -237,17 +238,16 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                         setSelectedCity(c)
                         setCityQuery(c.label)
                         setCityDropdownOpen(false)
-                        // Reset downstream option
                         setSelectedOption(null)
                         setOptionQuery("")
                       }}
                       className="
-                        cursor-pointer 
-                        px-3 
-                        py-1 
-                        text-sm 
-                        text-foreground 
-                        hover:bg-accent 
+                        cursor-pointer
+                        px-3
+                        py-1
+                        text-sm
+                        text-foreground
+                        hover:bg-accent
                         hover:text-accent-foreground
                       "
                     >
@@ -264,9 +264,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         </div>
 
-        {/* ──────────────────────────────────────────────────────────────── */}
-        {/*                         Buscar por Selector                     */}
-        {/* ──────────────────────────────────────────────────────────────── */}
+        {/* ─────────── Buscar por Selector ─────────── */}
         {selectedCity && (
           <div className="w-full md:w-1/3">
             <label
@@ -294,9 +292,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         )}
 
-        {/* ──────────────────────────────────────────────────────────────── */}
-        {/*                  Especialidad/Padecimiento Combobox             */}
-        {/* ──────────────────────────────────────────────────────────────── */}
+        {/* ─────────── Especialidad/Padecimiento Combobox ─────────── */}
         {selectedCity && (
           <div className="w-full md:w-1/3" ref={optionRef}>
             <label
@@ -321,37 +317,41 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                   setCityDropdownOpen(false)
                 }}
                 className="
-                  w-full 
-                  h-10 
-                  rounded-md 
-                  border 
-                  border-border 
-                  bg-input 
-                  px-3 
-                  py-1 
-                  text-sm 
-                  text-foreground 
-                  placeholder:text-muted-foreground 
-                  focus:outline-none 
-                  focus:ring-2 
-                  focus:ring-primary
+                  w-full
+                  h-10
+                  rounded-md
+                  border
+                  border-input
+                  bg-background
+                  px-3
+                  py-2
+                  text-sm
+                  text-foreground
+                  placeholder:text-muted-foreground
+                  focus:outline-none
+                  focus:ring-2
+                  focus:ring-ring
+                  focus:ring-offset-2
+                  ring-offset-background
+                  disabled:cursor-not-allowed
+                  disabled:opacity-50
                 "
+                ref={optionInputRef}
               />
 
-              {/* Only open suggestions when user has typed ≥1 character */}
               {optionDropdownOpen && optionQuery.length > 0 && (
                 <ul className="
-                  absolute 
-                  z-10 
-                  mt-1 
-                  max-h-60 
-                  w-full 
-                  overflow-auto 
-                  rounded-md 
-                  bg-input 
-                  shadow-lg 
-                  ring-1 
-                  ring-border 
+                  absolute
+                  z-10
+                  mt-1
+                  max-h-60
+                  w-full
+                  overflow-auto
+                  rounded-md
+                  bg-background
+                  shadow-lg
+                  ring-1
+                  ring-border
                   ring-opacity-10
                 ">
                   {filteredOptions.length > 0 ? (
@@ -364,12 +364,12 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                           setOptionDropdownOpen(false)
                         }}
                         className="
-                          cursor-pointer 
-                          px-3 
-                          py-1 
-                          text-sm 
-                          text-foreground 
-                          hover:bg-accent 
+                          cursor-pointer
+                          px-3
+                          py-1
+                          text-sm
+                          text-foreground
+                          hover:bg-accent
                           hover:text-accent-foreground
                         "
                       >
@@ -387,9 +387,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         )}
 
-        {/* ──────────────────────────────────────────────────────────────── */}
-        {/*                         Botón “Buscar”                           */}
-        {/* ──────────────────────────────────────────────────────────────── */}
+        {/* ─────────── Botón “Buscar” ─────────── */}
         <Button
           onClick={handleSearch}
           className="w-full md:w-auto h-10"
