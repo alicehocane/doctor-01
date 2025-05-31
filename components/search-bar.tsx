@@ -53,7 +53,6 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     { value: "Guadalajara", label: "Guadalajara" },
   ]
 
-
   const allEspecialidades: ComboboxItem[] = [
   { value: "Psicología", label: "Psicología" },
   { value: "Odontología", label: "Odontología" },
@@ -1384,7 +1383,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   { value: "Varicosidad", label: "Varicosidad" },
   { value: "Vitreoretinopatía proliferativa", label: "Vitreoretinopatía proliferativa" },
   { value: "Várices esofágicas sangrantes", label: "Várices esofágicas sangrantes" },
-  { value: "Íleo del colon", label: "Íleo del colon" },
+  { value: "Íleo del colon", label: "Íleo del colon" }
 
     // "Aborto electivo o terapéutico",  // 6
     // "Abrupción placentaria",  // 6
@@ -3563,6 +3562,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   // ---------------------- Filter Logic ----------------------
 // ---------------------- Filter Logic ----------------------
    // ---------------------- Filter Logic ----------------------
+  // ---------------------- Filter Logic ----------------------
   const filteredCities = useMemo(() => {
     if (!cityQuery) return []
     return ciudades.filter((c) =>
@@ -3879,4 +3879,4 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
       </div>
     </div>
   )
-}
+}  
