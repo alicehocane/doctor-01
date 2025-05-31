@@ -27,24 +27,24 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   const router = useRouter()
 
   // ---------------------- State ----------------------
-  // 1) City combobox
+  // City combobox
   const [cityQuery, setCityQuery] = useState<string>("")
   const [selectedCity, setSelectedCity] = useState<ComboboxItem | null>(null)
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false)
 
-  // 2) Search-by (Especialidad | Padecimiento)
+  // Search-by (Especialidad | Padecimiento)
   const [searchBy, setSearchBy] = useState<"especialidad" | "padecimiento">(
     "especialidad"
   )
 
-  // 3) Option combobox (Especialidad or Padecimiento)
+  // Option combobox (Especialidad or Padecimiento)
   const [optionQuery, setOptionQuery] = useState<string>("")
   const [selectedOption, setSelectedOption] = useState<ComboboxItem | null>(
     null
   )
   const [optionDropdownOpen, setOptionDropdownOpen] = useState(false)
 
-  // 4) Final search button loading
+  // Final search button loading
   const [isSearching, setIsSearching] = useState(false)
 
   // ---------------------- Hardcoded Data ----------------------
@@ -207,13 +207,21 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                 px-3 
                 py-1 
                 text-sm 
+                text-gray-900 
+                placeholder-gray-500 
                 focus:outline-none 
                 focus:ring-2 
-                focus:ring-primary
+                focus:ring-primary 
+
+                /* DARK MODE */
+                dark:bg-gray-800 
+                dark:border-gray-700 
+                dark:text-gray-100 
+                dark:placeholder-gray-400
               "
             />
 
-            {/* Only show dropdown when user has at least one character */}
+            {/* Only show dropdown if user typed at least one character */}
             {cityDropdownOpen && cityQuery.length > 0 && (
               <ul className="
                 absolute 
@@ -228,6 +236,10 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                 ring-1 
                 ring-black 
                 ring-opacity-5
+
+                /* DARK MODE */
+                dark:bg-gray-900 
+                dark:ring-gray-700
               ">
                 {filteredCities.length > 0 ? (
                   filteredCities.map((c) => (
@@ -246,14 +258,17 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                         px-3 
                         py-1 
                         text-sm 
-                        hover:bg-gray-100
+                        hover:bg-gray-100 
+
+                        /* DARK MODE */
+                        dark:hover:bg-gray-800
                       "
                     >
                       {c.label}
                     </li>
                   ))
                 ) : (
-                  <li className="px-3 py-1 text-sm text-gray-500">
+                  <li className="px-3 py-1 text-sm text-gray-500 dark:text-gray-400">
                     No hay coincidencias
                   </li>
                 )}
@@ -328,9 +343,17 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                   px-3 
                   py-1 
                   text-sm 
+                  text-gray-900 
+                  placeholder-gray-500 
                   focus:outline-none 
                   focus:ring-2 
-                  focus:ring-primary
+                  focus:ring-primary 
+
+                  /* DARK MODE */
+                  dark:bg-gray-800 
+                  dark:border-gray-700 
+                  dark:text-gray-100 
+                  dark:placeholder-gray-400
                 "
               />
 
@@ -349,6 +372,10 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                   ring-1 
                   ring-black 
                   ring-opacity-5
+
+                  /* DARK MODE */
+                  dark:bg-gray-900 
+                  dark:ring-gray-700
                 ">
                   {filteredOptions.length > 0 ? (
                     filteredOptions.map((opt) => (
@@ -364,14 +391,17 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                           px-3 
                           py-1 
                           text-sm 
-                          hover:bg-gray-100
+                          hover:bg-gray-100 
+
+                          /* DARK MODE */
+                          dark:hover:bg-gray-800
                         "
                       >
                         {opt.label}
                       </li>
                     ))
                   ) : (
-                    <li className="px-3 py-1 text-sm text-gray-500">
+                    <li className="px-3 py-1 text-sm text-gray-500 dark:text-gray-400">
                       No hay coincidencias
                     </li>
                   )}
