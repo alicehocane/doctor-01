@@ -1,4 +1,3 @@
-// components/header.tsx
 "use client"
 
 import { useState } from "react"
@@ -13,7 +12,9 @@ export default function Header() {
   const pathname = usePathname()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
-  const isActive = (path: string) => pathname === path
+  const isActive = (path: string) => {
+    return pathname === path
+  }
 
   const navLinks = [
     { href: "/", label: "Inicio" },
@@ -23,7 +24,7 @@ export default function Header() {
   ]
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link href="/" className="text-xl md:text-2xl font-bold text-primary">
           Busca Doctor México
