@@ -16,6 +16,18 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <MainLayout showSearch={false}>
+      {/*
+        1) Sticky wrapper around SearchBar.
+           - 'sticky top-16' pushes it down by 4rem (your header height).
+           - 'z-40' ensures the header (which is z-50) stays above.
+           - Give it a bg and border/shadow to separate from the hero below.
+      */}
+      <div className="sticky top-16 z-40 bg-background border-b shadow-sm">
+        <div className="container mx-auto px-4 py-3">
+          <SearchBar className="mb-0" />
+        </div>
+      </div>
+
       {/* Hero Section */}
       <section className="py-12 md:py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
