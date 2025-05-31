@@ -1386,6 +1386,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   { value: "Íleo del colon", label: "Íleo del colon" }
 ]
 
+ // ---------------------- Filter Logic ----------------------
   const filteredCities = useMemo(() => {
     if (!cityQuery) return []
     return ciudades.filter((c) =>
@@ -1452,11 +1453,11 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
       try {
         await trackSearch(searchBy, selectedOption.value)
         router.push(
-          /buscar?ciudad=${encodeURIComponent(
+          `/buscar?ciudad=${encodeURIComponent(
             selectedCity.value
           )}&tipo=${searchBy}&valor=${encodeURIComponent(
             selectedOption.value
-          )}
+          )}`
         )
       } catch (error) {
         console.error("Error tracking search:", error)
@@ -1469,7 +1470,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   // ---------------------- Render ----------------------
   return (
     <div
-      className={bg-card rounded-lg shadow-sm p-4 mx-auto w-full max-w-screen-xl ${className}}
+      className={`bg-card rounded-lg shadow-sm p-4 mx-auto w-full max-w-screen-xl ${className}`}
     >
       <div className="flex flex-col gap-3 items-stretch md:flex-row md:justify-center md:items-end">
         {/* ─────────── Ciudad Combobox ─────────── */}
@@ -1547,7 +1548,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                       className="
                         cursor-pointer
                         px-3
-                        py-2
+                        py-1
                         text-sm
                         text-foreground
                         hover:bg-accent
@@ -1558,7 +1559,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                     </li>
                   ))
                 ) : (
-                  <li className="px-3 py-2 text-sm text-muted-foreground">
+                  <li className="px-3 py-1 text-sm text-muted-foreground">
                     No hay coincidencias
                   </li>
                 )}
@@ -1608,7 +1609,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               <input
                 id="search-value"
                 type="text"
-                placeholder={Escribe para buscar ${searchBy}}
+                placeholder={`Escribe para buscar ${searchBy}`}
                 value={selectedOption?.label ?? optionQuery}
                 onChange={(e) => {
                   setOptionQuery(e.target.value)
@@ -1669,7 +1670,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                         className="
                           cursor-pointer
                           px-3
-                          py-2
+                          py-1
                           text-sm
                           text-foreground
                           hover:bg-accent
@@ -1680,7 +1681,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                       </li>
                     ))
                   ) : (
-                    <li className="px-3 py-2 text-sm text-muted-foreground">
+                    <li className="px-3 py-1 text-sm text-muted-foreground">
                       No hay coincidencias
                     </li>
                   )}
@@ -1702,4 +1703,4 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
       </div>
     </div>
   )
-}  
+}
