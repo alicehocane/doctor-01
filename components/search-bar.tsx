@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Search, ChevronDown } from "lucide-react"
+import { Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -26,20 +26,9 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   const [searchValue, setSearchValue] = useState<string>("")
   const [isSearching, setIsSearching] = useState(false)
 
-  // Pagination state for “Ver más”
-  const [loadMoreState, setLoadMoreState] = useState<{
-    especialidad: number
-    padecimiento: number
-  }>({
-    especialidad: 1,
-    padecimiento: 1,
-  })
-
-  // Filter inputs for typeahead functionality
+  // Typeahead filter inputs
   const [cityFilter, setCityFilter] = useState<string>("")
   const [optionFilter, setOptionFilter] = useState<string>("")
-
-  // Hardcoded data arrays
 
   const ciudades = ["Ciudad de México", "Monterrey", "Guadalajara"]
   const allEspecialidades = [
@@ -3553,29 +3542,6 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
   ]
 
   
-  function getPaginatedOptions(type: "especialidad" | "padecimiento") {
-    const all =
-      type === "especialidad" ? allEspecialidades : allPadecimientos
-    const chunk = loadMoreState[type]
-    const limit = 50 * chunk
-    return limit >= all.length ? all : all.slice(0, limit)
-  }
-
-  function shouldShowLoadMore(type: "especialidad" | "padecimiento") {
-    const all =
-      type === "especialidad" ? allEspecialidades : allPadecimientos
-    return all.length > 50 * loadMoreState[type]
-  }
-
-  function handleLoadMore(type: "especialidad" | "padecimiento") {
-    setLoadMoreState((prev) => ({
-      ...prev,
-      [type]: prev[type] + 1,
-    }))
-    setSearchValue("") // Reset selected value when loading more
-    setOptionFilter("") // Clear filter input
-  }
-
   const handleSearch = async () => {
     if (selectedCity && searchValue) {
       setIsSearching(true)
@@ -3594,22 +3560,20 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     }
   }
 
-  // Filtered lists for typeahead
+  // Filtered lists: only show items matching what the user types
   const filteredCities = useMemo(() => {
     return ciudades.filter((c) =>
       c.toLowerCase().includes(cityFilter.toLowerCase())
     )
   }, [cityFilter])
 
-  const paginatedOptions = useMemo(() => {
-    return getPaginatedOptions(searchBy)
-  }, [searchBy, loadMoreState])
-
   const filteredOptions = useMemo(() => {
-    return paginatedOptions.filter((opt) =>
+    const list =
+      searchBy === "especialidad" ? allEspecialidades : allPadecimientos
+    return list.filter((opt) =>
       opt.toLowerCase().includes(optionFilter.toLowerCase())
     )
-  }, [paginatedOptions, optionFilter])
+  }, [searchBy, optionFilter])
 
   return (
     <div
@@ -3626,18 +3590,18 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
             onValueChange={(val) => {
               setSelectedCity(val)
               setSearchValue("")
-              setOptionFilter("") // Clear filter when city changes
+              setOptionFilter("")
             }}
           >
             <SelectTrigger id="city" className="w-full">
-              <SelectValue placeholder="Selecciona una ciudad" />
+              <SelectValue placeholder="Escribe para buscar…" />
             </SelectTrigger>
             <SelectContent>
-              {/* Typeahead input */}
+              {/* Typeahead input field */}
               <div className="px-3 py-2">
                 <input
                   type="text"
-                  placeholder="Escribe para buscar..."
+                  placeholder="Escribe para buscar ciudad"
                   className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   value={cityFilter}
                   onChange={(e) => setCityFilter(e.target.value)}
@@ -3670,11 +3634,11 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               onValueChange={(val) => {
                 setSearchBy(val)
                 setSearchValue("")
-                setOptionFilter("") // Clear option filter when type changes
+                setOptionFilter("")
               }}
             >
               <SelectTrigger id="search-by" className="w-full">
-                <SelectValue placeholder="Tipo de búsqueda" />
+                <SelectValue placeholder="Selecciona tipo" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="especialidad">Especialidad</SelectItem>
@@ -3684,7 +3648,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         )}
 
-        {/* ---------------------- Value + “Ver más” ---------------------- */}
+        {/* ---------------------- Value + typeahead ---------------------- */}
         {selectedCity && (
           <div className="w-full md:w-1/3">
             <label htmlFor="search-value" className="block text-sm font-medium mb-1">
@@ -3692,14 +3656,14 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
             </label>
             <Select value={searchValue} onValueChange={setSearchValue}>
               <SelectTrigger id="search-value" className="w-full">
-                <SelectValue placeholder={`Selecciona ${searchBy}`} />
+                <SelectValue placeholder="Escribe para buscar…" />
               </SelectTrigger>
               <SelectContent>
-                {/* Typeahead input */}
+                {/* Typeahead input field */}
                 <div className="px-3 py-2">
                   <input
                     type="text"
-                    placeholder="Escribe para buscar..."
+                    placeholder={`Escribe para buscar ${searchBy}`}
                     className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     value={optionFilter}
                     onChange={(e) => setOptionFilter(e.target.value)}
@@ -3714,23 +3678,6 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                   {filteredOptions.length === 0 && (
                     <div className="px-3 py-2 text-center text-sm text-gray-500">
                       No hay coincidencias
-                    </div>
-                  )}
-                  {/* “Ver más” button below filtered options */}
-                  {shouldShowLoadMore(searchBy) && (
-                    <div className="px-3 py-2">
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          handleLoadMore(searchBy)
-                        }}
-                        className="flex w-full items-center justify-center rounded-md bg-secondary px-2 py-1 text-sm font-medium text-white hover:bg-secondary-dark"
-                      >
-                        <ChevronDown className="h-4 w-4 mr-1" />
-                        {loadMoreState[searchBy] < 5
-                          ? "Ver más"
-                          : "Ver más allá"}
-                      </button>
                     </div>
                   )}
                 </div>
