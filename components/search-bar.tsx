@@ -1,7 +1,7 @@
 // components/search-bar.tsx
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo  } from "react"
 import { Search, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
