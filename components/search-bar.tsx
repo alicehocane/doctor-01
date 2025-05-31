@@ -3547,15 +3547,13 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     // "Úlcera aftosa"  // 1
   ]
 
+  
   function getPaginatedOptions(type: "especialidad" | "padecimiento") {
     const all =
       type === "especialidad" ? allEspecialidades : allPadecimientos
     const chunk = loadMoreState[type]
-
-    // increase slice by 50 options each time
     const limit = 50 * chunk
-    if (limit >= all.length) return all
-    return all.slice(0, limit)
+    return limit >= all.length ? all : all.slice(0, limit)
   }
 
   function shouldShowLoadMore(type: "especialidad" | "padecimiento") {
@@ -3569,7 +3567,8 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
       ...prev,
       [type]: prev[type] + 1,
     }))
-    setSearchValue("") // clear the current selection
+    setSearchValue("") // Reset selected value when loading more
+    setOptionFilter("") // Clear filter input
   }
 
   const handleSearch = async () => {
@@ -3590,14 +3589,29 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
     }
   }
 
-  
+  // Filtered lists for typeahead
+  const filteredCities = useMemo(() => {
+    return ciudades.filter((c) =>
+      c.toLowerCase().includes(cityFilter.toLowerCase())
+    )
+  }, [cityFilter])
+
+  const paginatedOptions = useMemo(() => {
+    return getPaginatedOptions(searchBy)
+  }, [searchBy, loadMoreState])
+
+  const filteredOptions = useMemo(() => {
+    return paginatedOptions.filter((opt) =>
+      opt.toLowerCase().includes(optionFilter.toLowerCase())
+    )
+  }, [paginatedOptions, optionFilter])
+
   return (
-    // increase max-width to span more of the desktop viewport
     <div
       className={`bg-card rounded-lg shadow-sm p-4 mx-auto w-full max-w-screen-xl ${className}`}
     >
       <div className="flex flex-col gap-3 items-stretch md:flex-row md:justify-center md:items-end">
-        {/* City selector */}
+        {/* ---------------------- City selector ---------------------- */}
         <div className="w-full md:w-1/3">
           <label htmlFor="city" className="block text-sm font-medium mb-1">
             Buscar en
@@ -3607,22 +3621,40 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
             onValueChange={(val) => {
               setSelectedCity(val)
               setSearchValue("")
+              setOptionFilter("") // Clear filter when city changes
             }}
           >
             <SelectTrigger id="city" className="w-full">
               <SelectValue placeholder="Selecciona una ciudad" />
             </SelectTrigger>
             <SelectContent>
-              {ciudades.map((city) => (
-                <SelectItem key={city} value={city}>
-                  {city}
-                </SelectItem>
-              ))}
+              {/* Typeahead input */}
+              <div className="px-3 py-2">
+                <input
+                  type="text"
+                  placeholder="Escribe para buscar..."
+                  className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={cityFilter}
+                  onChange={(e) => setCityFilter(e.target.value)}
+                />
+              </div>
+              <div className="max-h-[250px] overflow-y-auto">
+                {filteredCities.map((city) => (
+                  <SelectItem key={city} value={city}>
+                    {city}
+                  </SelectItem>
+                ))}
+                {filteredCities.length === 0 && (
+                  <div className="px-3 py-2 text-center text-sm text-gray-500">
+                    No hay coincidencias
+                  </div>
+                )}
+              </div>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Search-by selector */}
+        {/* ---------------------- Search-by selector ---------------------- */}
         {selectedCity && (
           <div className="w-full md:w-1/3">
             <label htmlFor="search-by" className="block text-sm font-medium mb-1">
@@ -3633,6 +3665,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               onValueChange={(val) => {
                 setSearchBy(val)
                 setSearchValue("")
+                setOptionFilter("") // Clear option filter when type changes
               }}
             >
               <SelectTrigger id="search-by" className="w-full">
@@ -3646,7 +3679,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         )}
 
-        {/* Value + “Ver más” */}
+        {/* ---------------------- Value + “Ver más” ---------------------- */}
         {selectedCity && (
           <div className="w-full md:w-1/3">
             <label htmlFor="search-value" className="block text-sm font-medium mb-1">
@@ -3656,30 +3689,52 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
               <SelectTrigger id="search-value" className="w-full">
                 <SelectValue placeholder={`Selecciona ${searchBy}`} />
               </SelectTrigger>
-              <SelectContent className="max-h-[300px] overflow-y-auto">
-                {getPaginatedOptions(searchBy).map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
-                {shouldShowLoadMore(searchBy) && (
-                  <div
-                    className="flex items-center justify-center p-2 text-primary cursor-pointer hover:bg-accent"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      handleLoadMore(searchBy)
-                    }}
-                  >
-                    <ChevronDown className="h-4 w-4 mr-2" />
-                    {loadMoreState[searchBy] < 5 ? "Ver más" : "Ver más allá"}
-                  </div>
-                )}
+              <SelectContent>
+                {/* Typeahead input */}
+                <div className="px-3 py-2">
+                  <input
+                    type="text"
+                    placeholder="Escribe para buscar..."
+                    className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={optionFilter}
+                    onChange={(e) => setOptionFilter(e.target.value)}
+                  />
+                </div>
+                <div className="max-h-[250px] overflow-y-auto">
+                  {filteredOptions.map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {opt}
+                    </SelectItem>
+                  ))}
+                  {filteredOptions.length === 0 && (
+                    <div className="px-3 py-2 text-center text-sm text-gray-500">
+                      No hay coincidencias
+                    </div>
+                  )}
+                  {/* “Ver más” button below filtered options */}
+                  {shouldShowLoadMore(searchBy) && (
+                    <div className="px-3 py-2">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          handleLoadMore(searchBy)
+                        }}
+                        className="flex w-full items-center justify-center rounded-md bg-secondary px-2 py-1 text-sm font-medium text-white hover:bg-secondary-dark"
+                      >
+                        <ChevronDown className="h-4 w-4 mr-1" />
+                        {loadMoreState[searchBy] < 5
+                          ? "Ver más"
+                          : "Ver más allá"}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </SelectContent>
             </Select>
           </div>
         )}
 
-        {/* Search button */}
+        {/* ---------------------- Search button ---------------------- */}
         <Button
           onClick={handleSearch}
           className="w-full md:w-auto"
