@@ -1,10 +1,9 @@
-import { Metadata } from "next";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import DoctorProfile from "@/components/doctor-profile";
-import MainLayout from "@/components/main-layout";
-import { getDoctorData } from "@/lib/get-doctor";
+import type { Metadata } from "next"
+import Link from "next/link"
+import { ChevronLeft } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import DoctorProfile from "@/components/doctor-profile"
+import MainLayout from "@/components/main-layout"
 
 interface DoctorPageProps {
   params: {
@@ -12,29 +11,20 @@ interface DoctorPageProps {
   }
 }
 
+// This would be replaced with a server-side data fetch in a real app
 export async function generateMetadata({ params }: DoctorPageProps): Promise<Metadata> {
-  const doctor = await getDoctorData(params.id);
-  
-  if (!doctor) {
-    return {
-      title: "Perfil Médico | Busca Doctor México",
-      description: "Información de contacto y perfil profesional del médico."
-    };
-  }
+  // Mock data for demonstration
+  const doctorName = "Dr. Luis Felipe Aguilar Aguilar"
+  const specialty = "Cardiólogo"
 
   return {
-    title: `${doctor.fullName} - ${doctor.specialties?.[0] || 'Médico'} | Busca Doctor México`,
-    description: `Información de contacto y perfil profesional de ${doctor.fullName}, ${doctor.specialties?.join(', ') || 'médico especialista'} en México.`,
-    openGraph: {
-      title: `${doctor.fullName} | Busca Doctor México`,
-      description: `Perfil profesional de ${doctor.fullName}`,
-      // Add other OG tags as needed
-    }
-  };
+    title: `${doctorName} - ${specialty} | Busca Doctor México`,
+    description: `Información de contacto y perfil profesional de ${doctorName}, ${specialty} en México.`,
+  }
 }
 
-export default async function DoctorPage({ params }: DoctorPageProps) {
-  const doctor = await getDoctorData(params.id);
+export default function DoctorPage({ params }: DoctorPageProps) {
+  const { id } = params
 
   return (
     <MainLayout showSearch={false}>
@@ -45,7 +35,7 @@ export default async function DoctorPage({ params }: DoctorPageProps) {
         </Link>
       </Button>
 
-      <DoctorProfile id={params.id} initialData={doctor} />
+      <DoctorProfile id={id} />
     </MainLayout>
-  );
+  )
 }
