@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import DoctorProfile from "@/components/doctor-profile";
 import MainLayout from "@/components/main-layout";
 
-// 1) Import Firestore from your Admin SDK
+// 1) Import Firestore from your admin setup
 import { firestore } from "@/lib/firebase-admin";
 
 interface DoctorPageProps {
@@ -16,32 +16,32 @@ interface DoctorPageProps {
   };
 }
 
-// -----------------------------------------------------
-// 2) generateMetadata: fetch real data from Firestore
-// -----------------------------------------------------
+// ──────────────────────────────────────────────────────────────────────────────
+// 2) generateMetadata: fetch real data from Firestore (Admin SDK)
+// ──────────────────────────────────────────────────────────────────────────────
 export async function generateMetadata({ params }: DoctorPageProps): Promise<Metadata> {
   const { id } = params;
 
   try {
     // Reference the “doctors/{id}” document in Firestore
-    const docRef = firestore.collection("doctors").doc(id);
-    const docSnap = await docRef.get();
+    const referenciaDocumento = firestore.collection("doctors").doc(id);
+    const documentoSnapshot = await referenciaDocumento.get();
 
-    if (!docSnap.exists) {
-      // If no document found, return a generic “not found” head
+    if (!documentoSnapshot.exists) {
+      // If the document does not exist, return a generic “not found” head
       return {
         title: "Doctor no encontrado | Busca Doctor México",
         description: "No se pudo encontrar el perfil del doctor especificado.",
       };
     }
 
-    // Data exists: extract fields
-    const datos = docSnap.data()!;
-    // fullName is expected to be a string
+    // Extract data fields from the document
+    const datos = documentoSnapshot.data()!;
+    // `fullName` must be a string
     const nombreCompleto: string =
       typeof datos.fullName === "string" ? datos.fullName : "Sin nombre";
 
-    // specialties is expected to be an array of strings; pick first or fallback
+    // `specialties` is expected to be an array of strings; pick the first one or fallback
     const arregloEspecialidades: unknown = datos.specialties;
     const listaEspecialidades: string[] = Array.isArray(arregloEspecialidades)
       ? (arregloEspecialidades as string[])
@@ -49,13 +49,19 @@ export async function generateMetadata({ params }: DoctorPageProps): Promise<Met
     const especialidad: string =
       listaEspecialidades.length > 0 ? listaEspecialidades[0] : "Especialidad desconocida";
 
+    // Return a dynamic <title> and <meta description>
     return {
       title: `${nombreCompleto} – ${especialidad} | Busca Doctor México`,
       description: `Perfil y contacto de ${nombreCompleto}, especialista en ${especialidad}.`,
     };
-  } catch (error) {
-    // If something goes wrong (permission issues, network), log and fallback
-    console.error("Error fetching metadata for doctor id=", id, ":", error);
+  } catch (error: any) {
+    // If any error occurs (e.g. missing credentials, network), log it and fallback
+    console.error(
+      "[generateMetadata] Error fetching doctor id=",
+      id,
+      " — error code/message:",
+      error.code || error.message || error
+    );
     return {
       title: "Error cargando datos | Busca Doctor México",
       description: "Hubo un error al intentar cargar la información del doctor.",
@@ -63,9 +69,9 @@ export async function generateMetadata({ params }: DoctorPageProps): Promise<Met
   }
 }
 
-// ----------------------------------------------------
-// 3) Default export: render your page/UI as before
-// ----------------------------------------------------
+// ──────────────────────────────────────────────────────────────────────────────
+// 3) Page component: render the same layout/UI as before
+// ──────────────────────────────────────────────────────────────────────────────
 export default function DoctorPage({ params }: DoctorPageProps) {
   const { id } = params;
 
@@ -79,9 +85,8 @@ export default function DoctorPage({ params }: DoctorPageProps) {
       </Button>
 
       {/* 
-        DoctorProfile can still do a client‐side fetch (useEffect) 
-        to load addresses, phoneNumbers, etc. But the <title> in <head>
-        is already provided by generateMetadata above.
+        DoctorProfile can still fetch additional details (direcciones, teléfonos, etc.)
+        in a client-side useEffect. But the <title> is already set above.
       */}
       <DoctorProfile id={id} />
     </MainLayout>
