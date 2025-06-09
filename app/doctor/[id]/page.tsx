@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
 import Script from "next/script";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
@@ -34,11 +33,22 @@ export async function generateMetadata({ params }: DoctorPageProps): Promise<Met
 export default async function DoctorPage({ params }: DoctorPageProps) {
   const doctor = await getDoctorData(params.id);
 
+  // If doctor not found, show fallback UI
   if (!doctor) {
-    // Trigger the built-in 404 page
-    notFound();
+    return (
+      <MainLayout showSearch={false}>
+        <Button variant="ghost" asChild className="mb-6">
+          <Link href="/buscar">
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Volver a resultados
+          </Link>
+        </Button>
+        <p>Médico no encontrado.</p>
+      </MainLayout>
+    );
   }
 
+  // Build structured data (JSON-LD)
   const schema = {
     "@context": "https://schema.org",
     "@type": "Physician",
@@ -58,7 +68,7 @@ export default async function DoctorPage({ params }: DoctorPageProps) {
 
   return (
     <>
-      {/* JSON‑LD for SEO */}
+      {/* JSON-LD for SEO */}
       <Script
         id="physician-schema"
         type="application/ld+json"
