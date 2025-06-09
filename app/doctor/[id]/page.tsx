@@ -15,33 +15,41 @@ interface DoctorPageProps {
 export async function generateMetadata({ params }: DoctorPageProps): Promise<Metadata> {
   const doctor = await getDoctorData(params.id);
   
-  if (!doctor) {
+  
+  // Fallback if no doctor data
+  if (!doctor || !doctor.fullName) {
     return {
       title: "Perfil Médico | Busca Doctor México",
       description: "Información de contacto y perfil profesional del médico."
     };
   }
 
+  // Construct specialties text
+  const specialtiesText = doctor.specialties?.length > 0 
+    ? doctor.specialties.join(', ') 
+    : 'médico especialista';
+
   return {
     title: `${doctor.fullName} - ${doctor.specialties?.[0] || 'Médico'} | Busca Doctor México`,
-    description: `Información de contacto y perfil profesional de ${doctor.fullName}, ${doctor.specialties?.join(', ') || 'médico especialista'} en México.`,
+    description: `Información de contacto y perfil profesional de ${doctor.fullName}, ${specialtiesText} en México.`,
     openGraph: {
       title: `${doctor.fullName} | Busca Doctor México`,
-      description: `Perfil profesional de ${doctor.fullName}`,
-      // Add other OG tags as needed
+      description: `Perfil profesional de ${doctor.fullName}, ${specialtiesText}`,
+      url: `https://www.buscadoctor.mx/doctor/${doctor.id}`,
+      type: 'profile',
     }
   };
 }
 
-function addDoctorJsonLd(doctor: any) {
-  if (!doctor) return null;
-  
-  const schemaData = {
+function generateDoctorSchema(doctor: any) {
+  if (!doctor || !doctor.fullName) return '';
+
+  return JSON.stringify({
     "@context": "https://schema.org",
     "@type": "Physician",
     "@id": `https://www.buscadoctor.mx/doctor/${doctor.id}`,
     "name": doctor.fullName,
-    "description": `Perfil profesional de ${doctor.fullName}, ${doctor.specialties?.join(', ') || 'médico especialista'} en México.`,
+    "description": `Perfil profesional de ${doctor.fullName}`,
     "url": `https://www.buscadoctor.mx/doctor/${doctor.id}`,
     "medicalSpecialty": doctor.specialties?.map((specialty: string) => ({
       "@type": "MedicalSpecialty",
@@ -54,23 +62,28 @@ function addDoctorJsonLd(doctor: any) {
     })),
     "telephone": doctor.phoneNumbers?.[0],
     "sameAs": doctor.socialLinks || []
-  };
-
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
-    />
-  );
+  });
 }
 
 export default async function DoctorPage({ params }: DoctorPageProps) {
   const doctor = await getDoctorData(params.id);
+  const doctor = await getDoctorData(params.id);
+  
+  // Debug output
+  console.log('Doctor data received:', {
+    id: params.id,
+    exists: !!doctor,
+    name: doctor?.fullName,
+    specialties: doctor?.specialties
+  });
 
   return (
     <MainLayout showSearch={false}>
-      {/* Add JSON-LD structured data */}
-      {addDoctorJsonLd(doctor)}
+      {/* Structured data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: generateDoctorSchema(doctor) }}
+      />
       
       <Button variant="ghost" asChild className="mb-6">
         <Link href="/buscar">
