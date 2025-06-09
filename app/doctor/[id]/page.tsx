@@ -7,13 +7,22 @@ import DoctorProfile from "@/components/doctor-profile";
 import MainLayout from "@/components/main-layout";
 import { getDoctorData } from "@/lib/get-doctor";
 
+// Ensure this page always fetches fresh data (avoids build-time quota limits)
+export const dynamic = 'force-dynamic';
+
 interface DoctorPageProps {
   params: { id: string };
 }
 
 export async function generateMetadata({ params }: DoctorPageProps): Promise<Metadata> {
-  const doctor = await getDoctorData(params.id);
-  console.log("DoctorPage:", params.id, doctor);
+  let doctor;
+  try {
+    doctor = await getDoctorData(params.id);
+  } catch (err) {
+    console.error("Error fetching metadata doctor data:", err);
+    doctor = null;
+  }
+
   if (!doctor) {
     return {
       title: "Perfil Médico | Busca Doctor México",
@@ -32,9 +41,14 @@ export async function generateMetadata({ params }: DoctorPageProps): Promise<Met
 }
 
 export default async function DoctorPage({ params }: DoctorPageProps) {
-  const doctor = await getDoctorData(params.id);
+  let doctor;
+  try {
+    doctor = await getDoctorData(params.id);
+  } catch (err) {
+    console.error(`Error loading doctor ${params.id}:`, err);
+    doctor = null;
+  }
 
-  // If doctor not found, show fallback UI
   if (!doctor) {
     return (
       <MainLayout showSearch={false}>
@@ -44,12 +58,11 @@ export default async function DoctorPage({ params }: DoctorPageProps) {
             Volver a resultados
           </Link>
         </Button>
-        <p>Médico no encontrado.</p>
+        <p className="text-center text-red-600">Médico no encontrado o error de carga.</p>
       </MainLayout>
     );
   }
 
-  // Build structured data (JSON-LD)
   const schema = {
     "@context": "https://schema.org",
     "@type": "Physician",
