@@ -13,6 +13,7 @@ interface DoctorPageProps {
 
 export async function generateMetadata({ params }: DoctorPageProps): Promise<Metadata> {
   const doctor = await getDoctorData(params.id);
+  console.log("DoctorPage:", params.id, doctor);
   if (!doctor) {
     return {
       title: "Perfil Médico | Busca Doctor México",
