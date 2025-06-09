@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Script from "next/script";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
@@ -8,7 +9,7 @@ import MainLayout from "@/components/main-layout";
 import { getDoctorData } from "@/lib/get-doctor";
 
 interface DoctorPageProps {
-  params: { id: string }
+  params: { id: string };
 }
 
 export async function generateMetadata({ params }: DoctorPageProps): Promise<Metadata> {
@@ -21,8 +22,8 @@ export async function generateMetadata({ params }: DoctorPageProps): Promise<Met
   }
 
   return {
-    title: `${doctor.fullName} - ${doctor.specialties?.[0] || 'Médico'} | Busca Doctor México`,
-    description: `Información de contacto y perfil profesional de ${doctor.fullName}, ${doctor.specialties?.join(', ') || 'médico especialista'} en México.`,
+    title: `${doctor.fullName} - ${doctor.specialties?.[0] || "Médico"} | Busca Doctor México`,
+    description: `Información de contacto y perfil profesional de ${doctor.fullName}, ${doctor.specialties?.join(", ") || "médico especialista"} en México.`,
     openGraph: {
       title: `${doctor.fullName} | Busca Doctor México`,
       description: `Perfil profesional de ${doctor.fullName}`
@@ -32,32 +33,32 @@ export async function generateMetadata({ params }: DoctorPageProps): Promise<Met
 
 export default async function DoctorPage({ params }: DoctorPageProps) {
   const doctor = await getDoctorData(params.id);
+
   if (!doctor) {
-    // Optionally render a 404 or fallback UI
-    return <MainLayout showSearch={false}><p>Médico no encontrado.</p></MainLayout>;
+    // Trigger the built-in 404 page
+    notFound();
   }
 
-  // Build structured data (JSON‑LD)
   const schema = {
     "@context": "https://schema.org",
     "@type": "Physician",
     name: doctor.fullName,
     url: `https://buscadoctormexico.com/doctor/${doctor.id}`,
-    image: doctor.photoUrl || undefined,
-    description: `Perfil profesional de ${doctor.fullName}, especialista en ${doctor.specialties?.join(', ')}`,
+    ...(doctor.photoUrl && { image: doctor.photoUrl }),
+    description: `Perfil profesional de ${doctor.fullName}, especialista en ${doctor.specialties?.join(", ")}`,
     medicalSpecialty: doctor.specialties,
-    address: doctor.cities?.length > 0
-      ? {
-          "@type": "PostalAddress",
-          addressLocality: doctor.cities[0]
-        }
-      : undefined,
-    telephone: doctor.phoneNumbers?.[0]
+    ...(doctor.cities?.length > 0 && {
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: doctor.cities[0]
+      }
+    }),
+    ...(doctor.phoneNumbers?.length > 0 && { telephone: doctor.phoneNumbers[0] })
   };
 
   return (
     <>
-      {/* JSON-LD for SEO */}
+      {/* JSON‑LD for SEO */}
       <Script
         id="physician-schema"
         type="application/ld+json"
