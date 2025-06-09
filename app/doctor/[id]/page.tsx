@@ -65,7 +65,7 @@ function generateDoctorSchema(doctor: any) {
 
   return JSON.stringify({
     "@context": "https://schema.org",
-    "@type": "MedicalBusiness",
+    "@type": "Physician",
     "name": `Dr. ${doctor.fullName}`,
     "description": `Servicios médicos de ${doctor.fullName}, ${doctor.specialties?.[0] || 'especialista'} en México`,
     "url": `https://www.buscadoctor.mx/doctor/${doctor.id}`,
@@ -73,28 +73,26 @@ function generateDoctorSchema(doctor: any) {
       "@type": "MedicalSpecialty",
       "name": spec
     })),
-    "address": doctor.cities?.map((city: string) => ({
+    "address": doctor.addresses?.map((city: string) => ({
       "@type": "PostalAddress",
       "addressLocality": city,
       "addressRegion": "Mexico",
       "addressCountry": "MX"
     })),
-    "telephone": doctor.phoneNumbers?.[0],
-    "priceRange": "$$$",
-    "sameAs": doctor.socialLinks || []
+    "telephone": doctor.phoneNumbers?.[0]
   });
 }
 
 export default async function DoctorPage({ params }: DoctorPageProps) {
   const doctor = await getDoctorData(params.id);
 
-  // Debug output to verify data
-  console.log('Doctor page data:', {
-    id: params.id,
-    hasData: !!doctor,
-    name: doctor?.fullName,
-    specialties: doctor?.specialties
-  });
+  // // Debug output to verify data
+  // console.log('Doctor page data:', {
+  //   id: params.id,
+  //   hasData: !!doctor,
+  //   name: doctor?.fullName,
+  //   specialties: doctor?.specialties
+  // });
 
   return (
     <MainLayout showSearch={false}>
