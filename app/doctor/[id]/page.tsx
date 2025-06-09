@@ -28,12 +28,12 @@ export async function generateMetadata({ params }: DoctorPageProps): Promise<Met
       };
     }
 
-    // Debug output to verify data
-    console.log('Doctor metadata data:', {
-      name: doctor.fullName,
-      specialties: doctor.specialties,
-      cities: doctor.cities
-    });
+    // // Debug output to verify data
+    // console.log('Doctor metadata data:', {
+    //   name: doctor.fullName,
+    //   specialties: doctor.specialties,
+    //   cities: doctor.cities
+    // });
 
     const specialty = doctor.specialties?.[0] || 'Médico';
     const location = doctor.cities?.[0] ? `en ${doctor.cities[0]}` : 'en México';
