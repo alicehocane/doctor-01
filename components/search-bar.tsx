@@ -20,38 +20,45 @@ interface SearchBarProps {
 interface ComboboxItem {
   value: string
   label: string
+  synonyms?: string[]
 }
+
+// Utility: strip accents/diacritics and lowercase
+const normalize = (str: string) =>
+  str
+    .normalize("NFD")                    // decompose combined letters
+    .replace(/[\u0300-\u036f]/g, "")     // remove diacritic marks
+    .toLowerCase()
 
 export default function SearchBar({ className = "" }: SearchBarProps) {
   const router = useRouter()
 
   // ---------------------- State ----------------------
-  // City combobox
   const [cityQuery, setCityQuery] = useState<string>("")
   const [selectedCity, setSelectedCity] = useState<ComboboxItem | null>(null)
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false)
 
-  // Search-by (Especialidad | Padecimiento)
   const [searchBy, setSearchBy] = useState<"especialidad" | "padecimiento">(
     "especialidad"
   )
 
-  // Option combobox (Especialidad or Padecimiento)
   const [optionQuery, setOptionQuery] = useState<string>("")
-  const [selectedOption, setSelectedOption] = useState<ComboboxItem | null>(
-    null
-  )
+  const [selectedOption, setSelectedOption] = useState<ComboboxItem | null>(null)
   const [optionDropdownOpen, setOptionDropdownOpen] = useState(false)
 
-  // Final search button loading
   const [isSearching, setIsSearching] = useState(false)
 
   // ---------------------- Hardcoded Data ----------------------
   const ciudades: ComboboxItem[] = [
-    { value: "Ciudad de México", label: "Ciudad de México" },
-    { value: "Monterrey", label: "Monterrey" },
+    {
+      value: "Ciudad de México",
+      label: "Ciudad de México",
+      synonyms: ["Mexico", "Ciudad de Mexico", "Distrito Federal", "DF"],
+    },
+    { value: "Monterrey",   label: "Monterrey" },
     { value: "Guadalajara", label: "Guadalajara" },
   ]
+
 
   const allEspecialidades: ComboboxItem[] = [
   { value: "Psicología", label: "Psicología" },
@@ -1389,9 +1396,11 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
  // ---------------------- Filter Logic ----------------------
   const filteredCities = useMemo(() => {
     if (!cityQuery) return []
-    return ciudades.filter((c) =>
-      c.label.toLowerCase().includes(cityQuery.toLowerCase())
-    )
+    const q = normalize(cityQuery)
+    return ciudades.filter((c) => {
+      if (normalize(c.label).includes(q)) return true
+      return !!c.synonyms?.some((syn) => normalize(syn).includes(q))
+    })
   }, [cityQuery])
 
   const filteredOptions = useMemo(() => {
@@ -1400,9 +1409,8 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
       searchBy === "especialidad"
         ? allEspecialidades
         : allPadecimientos
-    return list.filter((opt) =>
-      opt.label.toLowerCase().includes(optionQuery.toLowerCase())
-    )
+    const q = normalize(optionQuery)
+    return list.filter((opt) => normalize(opt.label).includes(q))
   }, [searchBy, optionQuery])
 
   // ---------------------- Click Outside Handling ----------------------
@@ -1473,7 +1481,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
       className={`bg-card rounded-lg shadow-sm p-4 mx-auto w-full max-w-screen-xl ${className}`}
     >
       <div className="flex flex-col gap-3 items-stretch md:flex-row md:justify-center md:items-end">
-        {/* ─────────── Ciudad Combobox ─────────── */}
+        {/* Ciudad Combobox */}
         <div className="w-full md:w-1/3" ref={cityRef}>
           <label htmlFor="city" className="block text-sm font-medium mb-1 text-foreground">
             Buscar en
@@ -1568,7 +1576,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         </div>
 
-        {/* ─────────── Buscar por Selector ─────────── */}
+        {/* Buscar por Selector */}
         {selectedCity && (
           <div className="w-full md:w-1/3">
             <label
@@ -1596,7 +1604,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         )}
 
-        {/* ─────────── Especialidad/Padecimiento Combobox ─────────── */}
+        {/* Especialidad/Padecimiento Combobox */}
         {selectedCity && (
           <div className="w-full md:w-1/3" ref={optionRef}>
             <label
@@ -1691,7 +1699,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
           </div>
         )}
 
-        {/* ─────────── Botón “Buscar” ─────────── */}
+        {/* Botón Buscar */}
         <Button
           onClick={handleSearch}
           className="w-full md:w-auto h-10"
