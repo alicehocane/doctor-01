@@ -67,7 +67,6 @@ function generateDoctorSchema(doctor: any) {
 
 export default async function DoctorPage({ params }: DoctorPageProps) {
   const doctor = await getDoctorData(params.id);
-  const doctor = await getDoctorData(params.id);
   
   // Debug output
   console.log('Doctor data received:', {
