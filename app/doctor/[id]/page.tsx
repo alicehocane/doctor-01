@@ -21,10 +21,6 @@ export async function generateMetadata({ params }: DoctorPageProps): Promise<Met
       return {
         title: "Perfil Médico | Busca Doctor México",
         description: "Información de contacto y perfil profesional del médico.",
-        robots: {
-          index: false,
-          follow: true
-        }
       };
     }
 
