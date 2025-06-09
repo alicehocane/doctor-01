@@ -1,45 +1,20 @@
-import { firestore } from './firebase-admin';
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "./firebase";
 
-interface Doctor {
-  id: string;
-  fullName: string;
-  name?: string; // Fallback field
-  specialties: string[];
-  cities: string[];
-  phoneNumbers: string[];
-  diseasesTreated?: string[];
-}
-
-export async function getDoctorData(id: string): Promise<Doctor | null> {
+export async function getDoctorData(id: string) {
   try {
-    const docRef = firestore.collection('doctors').doc(id);
-    const docSnap = await docRef.get();
-
-    if (!docSnap.exists) {
-      console.warn(`Doctor not found with ID: ${id}`);
-      return null;
-    }
-
-    const data = docSnap.data();
+    const docRef = doc(db, "doctors", id);
+    const docSnap = await getDoc(docRef);
     
-    // Transform and validate data
-    return {
-      id: docSnap.id,
-      fullName: data?.fullName || data?.name || 'Nombre no disponible',
-      specialties: data?.specialties || [],
-      cities: data?.cities || [],
-      phoneNumbers: data?.phoneNumbers || data?.phones || [],
-      diseasesTreated: data?.diseasesTreated || [],
-    };
+    if (docSnap.exists()) {
+      return {
+        id: docSnap.id,
+        ...docSnap.data()
+      };
+    }
+    return null;
   } catch (error) {
-    console.error(`Error fetching doctor ${id}:`, error);
-    
-    // Handle quota errors specifically
-    if (error.code === 8 || error.message.includes('RESOURCE_EXHAUSTED')) {
-      console.warn('Firestore quota exceeded, implementing fallback');
-      // Add your fallback logic here if needed
-    }
-    
+    console.error("Error fetching doctor:", error);
     return null;
   }
 }
