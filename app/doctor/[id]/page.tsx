@@ -4,7 +4,8 @@ import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DoctorProfile from "@/components/doctor-profile";
 import MainLayout from "@/components/main-layout";
-import { getDoctorData } from "@/lib/get-doctor";
+import { getCachedDoctorData } from '@/lib/cached-doctor';
+
 
 interface DoctorPageProps {
   params: {
@@ -13,61 +14,62 @@ interface DoctorPageProps {
 }
 
 export async function generateMetadata({ params }: DoctorPageProps): Promise<Metadata> {
-  let doctor;
-  
   try {
-    doctor = await getDoctorData(params.id);
+    const doctor = await getCachedDoctorData(params.id);
     
-    if (!doctor?.fullName) {
-      console.error('Doctor data missing fullName:', doctor);
+    if (!doctor) {
       return {
         title: "Perfil Médico | Busca Doctor México",
-        description: "Información de contacto y perfil profesional del médico."
+        description: "Información de contacto y perfil profesional del médico.",
+        robots: {
+          index: false,
+          follow: true
+        }
       };
     }
 
-    const primarySpecialty = doctor.specialties?.[0] || 'Médico';
-    const specialtiesText = doctor.specialties?.join(', ') || 'médico especialista';
+    const specialty = doctor.specialties[0] || 'Médico';
+    const location = doctor.cities[0] ? `en ${doctor.cities[0]}` : '';
 
     return {
-      title: `${doctor.fullName} - ${primarySpecialty} | Busca Doctor México`,
-      description: `Información de contacto y perfil profesional de ${doctor.fullName}, ${specialtiesText} en México.`,
-      openGraph: {
-        title: `${doctor.fullName} | Busca Doctor México`,
-        description: `Perfil profesional de ${doctor.fullName}, ${specialtiesText}`,
-        url: `/doctor/${params.id}`,
-        type: 'profile',
-      },
+      title: `${doctor.fullName} - ${specialty} ${location} | Busca Doctor México`,
+      description: `Perfil profesional de ${doctor.fullName}, ${specialty} ${location}. ${doctor.phoneNumbers[0] ? `Contacto: ${doctor.phoneNumbers[0]}` : ''}`,
       alternates: {
         canonical: `/doctor/${params.id}`
+      },
+      openGraph: {
+        type: 'profile',
+        profile: {
+          firstName: doctor.fullName.split(' ')[0],
+          lastName: doctor.fullName.split(' ').slice(1).join(' '),
+        }
       }
     };
   } catch (error) {
-    console.error('Error generating metadata:', error);
+    console.error('Metadata generation failed:', error);
     return {
       title: "Perfil Médico | Busca Doctor México",
-      description: "Información de contacto y perfil profesional del médico."
+      description: "Información de contacto y perfil profesional del médico.",
+      robots: {
+        index: false,
+        follow: true
+      }
     };
   }
 }
 
 export default async function DoctorPage({ params }: DoctorPageProps) {
-  const doctor = await getDoctorData(params.id);
-
-  // Debug output - check your server logs
-  console.log('Rendering doctor page with data:', {
-    id: params.id,
-    hasData: !!doctor,
-    name: doctor?.fullName,
-    specialties: doctor?.specialties
-  });
+  const doctor = await getCachedDoctorData(params.id);
 
   if (!doctor) {
     return (
       <MainLayout showSearch={false}>
         <div className="text-center py-10">
           <h2>Doctor no encontrado</h2>
-          <Button asChild className="mt-4">
+          <p className="text-muted-foreground mb-4">
+            No se encontró el perfil médico solicitado.
+          </p>
+          <Button asChild>
             <Link href="/buscar">Volver a buscar</Link>
           </Button>
         </div>
@@ -83,9 +85,8 @@ export default async function DoctorPage({ params }: DoctorPageProps) {
           Volver a resultados
         </Link>
       </Button>
-
+      
       <DoctorProfile id={params.id} initialData={doctor} />
     </MainLayout>
   );
 }
-
