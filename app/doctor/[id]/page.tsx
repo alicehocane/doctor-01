@@ -33,11 +33,45 @@ export async function generateMetadata({ params }: DoctorPageProps): Promise<Met
   };
 }
 
+function addDoctorJsonLd(doctor: any) {
+  if (!doctor) return null;
+  
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "Physician",
+    "@id": `https://www.buscadoctor.mx/doctor/${doctor.id}`,
+    "name": doctor.fullName,
+    "description": `Perfil profesional de ${doctor.fullName}, ${doctor.specialties?.join(', ') || 'médico especialista'} en México.`,
+    "url": `https://www.buscadoctor.mx/doctor/${doctor.id}`,
+    "medicalSpecialty": doctor.specialties?.map((specialty: string) => ({
+      "@type": "MedicalSpecialty",
+      "name": specialty
+    })),
+    "address": doctor.cities?.map((city: string) => ({
+      "@type": "PostalAddress",
+      "addressLocality": city,
+      "addressCountry": "MX"
+    })),
+    "telephone": doctor.phoneNumbers?.[0],
+    "sameAs": doctor.socialLinks || []
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+    />
+  );
+}
+
 export default async function DoctorPage({ params }: DoctorPageProps) {
   const doctor = await getDoctorData(params.id);
 
   return (
     <MainLayout showSearch={false}>
+      {/* Add JSON-LD structured data */}
+      {addDoctorJsonLd(doctor)}
+      
       <Button variant="ghost" asChild className="mb-6">
         <Link href="/buscar">
           <ChevronLeft className="mr-2 h-4 w-4" />
