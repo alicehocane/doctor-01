@@ -13,77 +13,70 @@ interface DoctorPageProps {
 }
 
 export async function generateMetadata({ params }: DoctorPageProps): Promise<Metadata> {
-  const doctor = await getDoctorData(params.id);
+  let doctor;
   
-  
-  // Fallback if no doctor data
-  if (!doctor || !doctor.fullName) {
+  try {
+    doctor = await getDoctorData(params.id);
+    
+    if (!doctor?.fullName) {
+      console.error('Doctor data missing fullName:', doctor);
+      return {
+        title: "Perfil Médico | Busca Doctor México",
+        description: "Información de contacto y perfil profesional del médico."
+      };
+    }
+
+    const primarySpecialty = doctor.specialties?.[0] || 'Médico';
+    const specialtiesText = doctor.specialties?.join(', ') || 'médico especialista';
+
+    return {
+      title: `${doctor.fullName} - ${primarySpecialty} | Busca Doctor México`,
+      description: `Información de contacto y perfil profesional de ${doctor.fullName}, ${specialtiesText} en México.`,
+      openGraph: {
+        title: `${doctor.fullName} | Busca Doctor México`,
+        description: `Perfil profesional de ${doctor.fullName}, ${specialtiesText}`,
+        url: `/doctor/${params.id}`,
+        type: 'profile',
+      },
+      alternates: {
+        canonical: `/doctor/${params.id}`
+      }
+    };
+  } catch (error) {
+    console.error('Error generating metadata:', error);
     return {
       title: "Perfil Médico | Busca Doctor México",
       description: "Información de contacto y perfil profesional del médico."
     };
   }
-
-  // Construct specialties text
-  const specialtiesText = doctor.specialties?.length > 0 
-    ? doctor.specialties.join(', ') 
-    : 'médico especialista';
-
-  return {
-    title: `${doctor.fullName} - ${doctor.specialties?.[0] || 'Médico'} | Busca Doctor México`,
-    description: `Información de contacto y perfil profesional de ${doctor.fullName}, ${specialtiesText} en México.`,
-    openGraph: {
-      title: `${doctor.fullName} | Busca Doctor México`,
-      description: `Perfil profesional de ${doctor.fullName}, ${specialtiesText}`,
-      url: `https://www.buscadoctor.mx/doctor/${doctor.id}`,
-      type: 'profile',
-    }
-  };
-}
-
-function generateDoctorSchema(doctor: any) {
-  if (!doctor || !doctor.fullName) return '';
-
-  return JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "Physician",
-    "@id": `https://www.buscadoctor.mx/doctor/${doctor.id}`,
-    "name": doctor.fullName,
-    "description": `Perfil profesional de ${doctor.fullName}`,
-    "url": `https://www.buscadoctor.mx/doctor/${doctor.id}`,
-    "medicalSpecialty": doctor.specialties?.map((specialty: string) => ({
-      "@type": "MedicalSpecialty",
-      "name": specialty
-    })),
-    "address": doctor.cities?.map((city: string) => ({
-      "@type": "PostalAddress",
-      "addressLocality": city,
-      "addressCountry": "MX"
-    })),
-    "telephone": doctor.phoneNumbers?.[0],
-    "sameAs": doctor.socialLinks || []
-  });
 }
 
 export default async function DoctorPage({ params }: DoctorPageProps) {
   const doctor = await getDoctorData(params.id);
-  
-  // Debug output
-  console.log('Doctor data received:', {
+
+  // Debug output - check your server logs
+  console.log('Rendering doctor page with data:', {
     id: params.id,
-    exists: !!doctor,
+    hasData: !!doctor,
     name: doctor?.fullName,
     specialties: doctor?.specialties
   });
 
+  if (!doctor) {
+    return (
+      <MainLayout showSearch={false}>
+        <div className="text-center py-10">
+          <h2>Doctor no encontrado</h2>
+          <Button asChild className="mt-4">
+            <Link href="/buscar">Volver a buscar</Link>
+          </Button>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout showSearch={false}>
-      {/* Structured data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: generateDoctorSchema(doctor) }}
-      />
-      
       <Button variant="ghost" asChild className="mb-6">
         <Link href="/buscar">
           <ChevronLeft className="mr-2 h-4 w-4" />
@@ -95,3 +88,4 @@ export default async function DoctorPage({ params }: DoctorPageProps) {
     </MainLayout>
   );
 }
+
